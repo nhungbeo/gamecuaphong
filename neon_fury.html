@@ -71,6 +71,26 @@
         ::-webkit-scrollbar {
             display: none;
         }
+        #gameContainer {
+            width: 100% !important;
+            height: 100% !important;
+            position: relative;
+        }
+        #gameCanvas {
+            width: 100% !important;
+            height: 100% !important;
+            display: block;
+        }
+        @media (min-width: 768px) {
+            #gameContainer {
+                max-width: 1024px !important;
+                max-height: 850px !important;
+                border-radius: 1.5rem !important;
+                border-width: 4px !important;
+                border-color: #1e293b !important; /* slate-800 */
+                box-shadow: 0 0 50px rgba(255,0,127,0.3) !important;
+            }
+        }
         @media (max-width: 920px) and (orientation: portrait) {
             #rotate-device-prompt {
                 opacity: 1 !important;
@@ -651,10 +671,16 @@
         // Responsive Canvas Scaling
         function resizeCanvas() {
             const container = document.getElementById('gameContainer');
-            canvas.width = container.clientWidth;
-            canvas.height = container.clientHeight;
+            if (container) {
+                canvas.width = container.clientWidth;
+                canvas.height = container.clientHeight;
+            }
         }
         window.addEventListener('resize', resizeCanvas);
+        window.addEventListener('load', () => {
+            setTimeout(resizeCanvas, 100);
+            setTimeout(resizeCanvas, 500);
+        });
         resizeCanvas();
 
         // Control input vectors
@@ -2076,6 +2102,11 @@
                 mobileControls.classList.add('hidden');
                 mobileControls.classList.remove('flex');
             }
+
+            // Gọi ép resize canvas ngay khi khởi tạo game để đảm bảo đúng tỉ lệ di động
+            resizeCanvas();
+            setTimeout(resizeCanvas, 100);
+            setTimeout(resizeCanvas, 300);
 
             startNewWave();
         }
