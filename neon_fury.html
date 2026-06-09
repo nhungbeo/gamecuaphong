@@ -94,7 +94,7 @@
     </div>
 
     <!-- Main game container wrapper mimicking an arcade cabinet console -->
-    <div id="gameContainer" class="relative w-full h-screen max-w-none max-h-none md:max-w-5xl md:max-h-[850px] bg-black md:rounded-3xl md:border-4 md:border-slate-800 md:shadow-[0_0_50px_rgba(255,0,127,0.3)] overflow-hidden flex flex-col items-center justify-center">
+    <div id="gameContainer" class="relative w-full h-full max-w-none max-h-none md:max-w-5xl md:max-h-[850px] bg-black md:rounded-3xl md:border-4 md:border-slate-800 md:shadow-[0_0_50px_rgba(255,0,127,0.3)] overflow-hidden flex flex-col items-center justify-center">
         
         <!-- Score HUD top bar (overlayed on top of the game screen) -->
         <div id="topHUD" class="absolute top-0 left-0 w-full p-4 flex justify-between items-center z-20 pointer-events-none select-none opacity-0 transition-opacity duration-500">
@@ -669,11 +669,13 @@
         let joystickStart = { x: 0, y: 0 };
         let joystickVector = { x: 0, y: 0 };
         const maxJoystickDist = 45;
+        let joystickTouchId = null;
 
         // Joystick P2 Vectors
         let joystickActive2 = false;
         let joystickStart2 = { x: 0, y: 0 };
         let joystickVector2 = { x: 0, y: 0 };
+        let joystickTouchId2 = null;
 
         // Mobile Fire State
         let isShootingP1 = false;
@@ -739,26 +741,28 @@
 
         joystickZone.addEventListener('touchstart', (e) => {
             sounds.init();
-            joystickActive = true;
-            const touch = e.touches[0];
-            const rect = joystickZone.getBoundingClientRect();
-            joystickStart = {
-                x: rect.left + rect.width / 2,
-                y: rect.top + rect.height / 2
-            };
+            if (joystickTouchId === null) {
+                const touch = e.changedTouches[0];
+                joystickTouchId = touch.identifier;
+                joystickActive = true;
+                const rect = joystickZone.getBoundingClientRect();
+                joystickStart = {
+                    x: rect.left + rect.width / 2,
+                    y: rect.top + rect.height / 2
+                };
+            }
         });
 
         joystickZone.addEventListener('touchmove', (e) => {
-            if (!joystickActive) return;
+            if (!joystickActive || joystickTouchId === null) return;
             let touch = null;
             for (let i = 0; i < e.touches.length; i++) {
-                const t = e.touches[i];
-                if (t.target === joystickZone || joystickZone.contains(t.target)) {
-                    touch = t;
+                if (e.touches[i].identifier === joystickTouchId) {
+                    touch = e.touches[i];
                     break;
                 }
             }
-            if (!touch) touch = e.touches[0];
+            if (!touch) return;
             
             let dx = touch.clientX - joystickStart.x;
             let dy = touch.clientY - joystickStart.y;
@@ -778,10 +782,22 @@
             isUsingMouse = false; // Override mouse if user touches controls
         });
 
-        const resetJoystick = () => {
-            joystickActive = false;
-            joystickKnob.style.transform = 'translate(0px, 0px)';
-            joystickVector = { x: 0, y: 0 };
+        const resetJoystick = (e) => {
+            if (joystickTouchId !== null) {
+                let touchFound = false;
+                for (let i = 0; i < e.changedTouches.length; i++) {
+                    if (e.changedTouches[i].identifier === joystickTouchId) {
+                        touchFound = true;
+                        break;
+                    }
+                }
+                if (touchFound) {
+                    joystickActive = false;
+                    joystickTouchId = null;
+                    joystickKnob.style.transform = 'translate(0px, 0px)';
+                    joystickVector = { x: 0, y: 0 };
+                }
+            }
         };
 
         joystickZone.addEventListener('touchend', resetJoystick);
@@ -793,26 +809,28 @@
 
         joystickZone2.addEventListener('touchstart', (e) => {
             sounds.init();
-            joystickActive2 = true;
-            const touch = e.touches[0];
-            const rect = joystickZone2.getBoundingClientRect();
-            joystickStart2 = {
-                x: rect.left + rect.width / 2,
-                y: rect.top + rect.height / 2
-            };
+            if (joystickTouchId2 === null) {
+                const touch = e.changedTouches[0];
+                joystickTouchId2 = touch.identifier;
+                joystickActive2 = true;
+                const rect = joystickZone2.getBoundingClientRect();
+                joystickStart2 = {
+                    x: rect.left + rect.width / 2,
+                    y: rect.top + rect.height / 2
+                };
+            }
         });
 
         joystickZone2.addEventListener('touchmove', (e) => {
-            if (!joystickActive2) return;
+            if (!joystickActive2 || joystickTouchId2 === null) return;
             let touch = null;
             for (let i = 0; i < e.touches.length; i++) {
-                const t = e.touches[i];
-                if (t.target === joystickZone2 || joystickZone2.contains(t.target)) {
-                    touch = t;
+                if (e.touches[i].identifier === joystickTouchId2) {
+                    touch = e.touches[i];
                     break;
                 }
             }
-            if (!touch) touch = e.touches[0];
+            if (!touch) return;
             
             let dx = touch.clientX - joystickStart2.x;
             let dy = touch.clientY - joystickStart2.y;
@@ -831,10 +849,22 @@
             };
         });
 
-        const resetJoystick2 = () => {
-            joystickActive2 = false;
-            joystickKnob2.style.transform = 'translate(0px, 0px)';
-            joystickVector2 = { x: 0, y: 0 };
+        const resetJoystick2 = (e) => {
+            if (joystickTouchId2 !== null) {
+                let touchFound = false;
+                for (let i = 0; i < e.changedTouches.length; i++) {
+                    if (e.changedTouches[i].identifier === joystickTouchId2) {
+                        touchFound = true;
+                        break;
+                    }
+                }
+                if (touchFound) {
+                    joystickActive2 = false;
+                    joystickTouchId2 = null;
+                    joystickKnob2.style.transform = 'translate(0px, 0px)';
+                    joystickVector2 = { x: 0, y: 0 };
+                }
+            }
         };
 
         joystickZone2.addEventListener('touchend', resetJoystick2);
