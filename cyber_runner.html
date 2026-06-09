@@ -2,7 +2,7 @@
 <html lang="vi">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>Cyber Runner 3D - Synthwave Infinite Runner</title>
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
     <style>
@@ -16,6 +16,8 @@
             width: 100%;
             height: 100%;
             overflow: hidden;
+            position: fixed;
+            touch-action: none;
             background-color: #030308;
             font-family: 'Orbitron', sans-serif;
             color: #fff;
@@ -256,6 +258,14 @@
             border-color: #ff0055;
             box-shadow: 0 0 25px rgba(255, 0, 85, 0.6);
         }
+        @media (max-width: 920px) {
+            .mode-btn {
+                font-size: 22px;
+                padding: 20px 50px;
+                width: 340px;
+                border-radius: 12px;
+            }
+        }
         
         /* Split overlay khi solo */
         .split-result-overlay {
@@ -310,9 +320,35 @@
             z-index: 5;
             pointer-events: none;
         }
+        @media (max-width: 768px) {
+            #control-single-desc, #control-solo-desc {
+                display: none !important;
+            }
+            #control-mobile-desc {
+                display: block !important;
+            }
+        }
+        @media (max-width: 920px) and (orientation: portrait) {
+            #rotate-device-prompt {
+                opacity: 1 !important;
+                pointer-events: auto !important;
+            }
+        }
+        @media (min-width: 921px), (orientation: landscape) {
+            #rotate-device-prompt {
+                display: none !important;
+            }
+        }
     </style>
 </head>
 <body>
+    <!-- Màn hình yêu cầu xoay màn hình khi chơi trên điện thoại dọc -->
+    <div id="rotate-device-prompt" class="fixed inset-0 bg-slate-950 flex flex-col items-center justify-center z-[99999] text-center p-6 transition-all duration-300 pointer-events-none opacity-0" style="position: fixed; width: 100%; height: 100%; top: 0; left: 0; background-color: #030308; display: flex; align-items: center; justify-content: center; font-family: sans-serif;">
+        <span class="text-6xl animate-bounce" style="font-size: 60px; display: block; margin-bottom: 15px;">🔄📱</span>
+        <h3 class="text-2xl font-extrabold text-white uppercase tracking-wide" style="font-size: 24px; color: #fff; margin-bottom: 8px;">Vui lòng xoay ngang màn hình</h3>
+        <p class="text-sm text-slate-400 max-w-xs" style="font-size: 14px; color: #888;">Xoay ngang điện thoại và bật tự động xoay màn hình để có trải nghiệm chơi game tốt nhất.</p>
+    </div>
+
     <div id="game-container">
         <!-- Lobby chọn chế độ chơi -->
         <div id="mode-select-screen">
@@ -382,6 +418,16 @@
                     <div class="control-row"><span style="color: #00f0ff;">P1</span>: <span class="key">A</span>/<span class="key">D</span> rẽ, <span class="key">W</span> nhảy, <span class="key">S</span> trượt</div>
                     <div class="control-row" style="margin-top: 4px;"><span style="color: #ff0055;">P2</span>: <span class="key">←</span>/<span class="key">→</span> rẽ, <span class="key">↑</span> nhảy, <span class="key">↓</span> trượt</div>
                 </div>
+                <div id="control-mobile-desc" style="display: none;">
+                    <div class="control-row">Di chuyển làn: <span class="key">Vuốt Trái / Phải</span></div>
+                    <div class="control-row" style="margin-top: 4px;">Nhảy tránh rào thấp: <span class="key">Vuốt Lên</span></div>
+                    <div class="control-row" style="margin-top: 4px;">Trượt chui rào cao: <span class="key">Vuốt Xuống</span></div>
+                </div>
+            </div>
+            <!-- Volume Control Panel -->
+            <div class="controls-panel" style="margin-top: 10px; display: flex; align-items: center; gap: 8px; pointer-events: auto;">
+                <button id="btn-mute-toggle" onclick="toggleMuteState()" style="background:transparent; border:none; color:#00f0ff; font-size:16px; cursor:pointer;">🔊</button>
+                <input type="range" id="volume-slider" min="0" max="1" step="0.1" value="0.5" oninput="changeVolume(this.value)" style="width: 80px; accent-color: #00f0ff; cursor: pointer;">
             </div>
         </div>
 
@@ -401,13 +447,54 @@
     <script>
         // --- ÂM THANH GIẢ LẬP QUA WEB AUDIO API ---
         const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        let mainVolumeNode = audioCtx.createGain();
+        mainVolumeNode.gain.setValueAtTime(0.5, audioCtx.currentTime);
+        mainVolumeNode.connect(audioCtx.destination);
+        
+        let isMuted = false;
+        let previousVolume = 0.5;
+
+        function toggleMuteState() {
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+            const btn = document.getElementById('btn-mute-toggle');
+            const slider = document.getElementById('volume-slider');
+            isMuted = !isMuted;
+            if (isMuted) {
+                previousVolume = parseFloat(slider.value);
+                changeVolume(0);
+                slider.value = 0;
+                btn.innerText = '🔇';
+            } else {
+                changeVolume(previousVolume > 0 ? previousVolume : 0.5);
+                slider.value = previousVolume > 0 ? previousVolume : 0.5;
+                btn.innerText = '🔊';
+            }
+        }
+        window.toggleMuteState = toggleMuteState;
+
+        function changeVolume(val) {
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+            const btn = document.getElementById('btn-mute-toggle');
+            const volume = parseFloat(val);
+            if (mainVolumeNode) {
+                mainVolumeNode.gain.setValueAtTime(volume, audioCtx.currentTime);
+            }
+            if (volume === 0) {
+                isMuted = true;
+                btn.innerText = '🔇';
+            } else {
+                isMuted = false;
+                btn.innerText = '🔊';
+            }
+        }
+        window.changeVolume = changeVolume;
 
         function playSynthJump() {
             if (audioCtx.state === 'suspended') audioCtx.resume();
             const osc = audioCtx.createOscillator();
             const gain = audioCtx.createGain();
             osc.connect(gain);
-            gain.connect(audioCtx.destination);
+            gain.connect(mainVolumeNode);
             
             osc.type = 'sine';
             osc.frequency.setValueAtTime(200, audioCtx.currentTime);
@@ -425,7 +512,7 @@
             const osc = audioCtx.createOscillator();
             const gain = audioCtx.createGain();
             osc.connect(gain);
-            gain.connect(audioCtx.destination);
+            gain.connect(mainVolumeNode);
 
             osc.type = 'triangle';
             osc.frequency.setValueAtTime(100, audioCtx.currentTime);
@@ -443,7 +530,7 @@
             const osc = audioCtx.createOscillator();
             const gain = audioCtx.createGain();
             osc.connect(gain);
-            gain.connect(audioCtx.destination);
+            gain.connect(mainVolumeNode);
 
             osc.type = 'sine';
             osc.frequency.setValueAtTime(587.33, audioCtx.currentTime); // D5
@@ -461,7 +548,7 @@
             const osc = audioCtx.createOscillator();
             const gain = audioCtx.createGain();
             osc.connect(gain);
-            gain.connect(audioCtx.destination);
+            gain.connect(mainVolumeNode);
 
             osc.type = 'sawtooth';
             osc.frequency.setValueAtTime(120, audioCtx.currentTime);
@@ -951,7 +1038,7 @@
                     scene.remove(obs.mesh);
                     obstacles.splice(i, 1);
                 } 
-                else if (!activePlayer.isGameOver && obs.mesh.position.z > config.playerZ - 0.7 && obs.mesh.position.z < config.playerZ + 0.7) {
+                else if (!activePlayer.isGameOver && obs.mesh.position.z > config.playerZ - 0.45 && obs.mesh.position.z < config.playerZ + 0.45) {
                     if (obs.lane === activePlayer.currentLane) {
                         let collision = false;
                         if (obs.type === 'low' && activePlayer.posY < 0.95) collision = true;
@@ -1002,7 +1089,7 @@
             // Player 1
             if (!p1.isGameOver) {
                 p1.distance += Math.round(p1.speed * 10);
-                p1.speed = Math.min(config.maxSpeed, config.baseSpeed + (p1.distance * 0.0001));
+                p1.speed = Math.min(config.maxSpeed - 0.12, config.baseSpeed + (p1.distance * 0.00006));
                 if (playMode === 'single') {
                     document.getElementById('distance-text').innerText = p1.distance.toString().padStart(4, '0') + " m";
                     const speedKmh = Math.round(p1.speed * 500);
@@ -1020,7 +1107,7 @@
             // Player 2
             if (playMode === 'solo' && !p2.isGameOver) {
                 p2.distance += Math.round(p2.speed * 10);
-                p2.speed = Math.min(config.maxSpeed, config.baseSpeed + (p2.distance * 0.0001));
+                p2.speed = Math.min(config.maxSpeed - 0.12, config.baseSpeed + (p2.distance * 0.00006));
                 document.getElementById('p2-distance-text').innerText = p2.distance.toString().padStart(4, '0') + " m";
             }
         }
@@ -1116,6 +1203,19 @@
 
         // CHỌN CHẾ ĐỘ CHƠI TỪ LOBBY
         function selectPlayMode(mode) {
+            // Request fullscreen and lock landscape on mobile touch devices
+            if ('ontouchstart' in window) {
+                const docEl = document.documentElement;
+                if (docEl.requestFullscreen) {
+                    docEl.requestFullscreen().then(() => {
+                        if (screen.orientation && screen.orientation.lock) {
+                            screen.orientation.lock('landscape').catch(() => {});
+                        }
+                    }).catch(() => {});
+                } else if (docEl.webkitRequestFullscreen) {
+                    docEl.webkitRequestFullscreen();
+                }
+            }
             playMode = mode;
             document.getElementById('mode-select-screen').style.display = 'none';
 
@@ -1377,6 +1477,68 @@
             speedTextNode.translation.set(speedCenter.x, speedCenter.y - 10);
             kmhTextNode.translation.set(speedCenter.x, speedCenter.y + 12);
         });
+
+        // --- ĐIỀU KHIỂN VUỐT MÀN HÌNH TRÊN ĐIỆN THOẠI (SWIPE CONTROLS) ---
+        let touchStartX = 0;
+        let touchStartY = 0;
+        let touchEndX = 0;
+        let touchEndY = 0;
+
+        window.addEventListener('touchstart', (e) => {
+            touchStartX = e.changedTouches[0].screenX;
+            touchStartY = e.changedTouches[0].screenY;
+        }, { passive: true });
+
+        window.addEventListener('touchend', (e) => {
+            touchEndX = e.changedTouches[0].screenX;
+            touchEndY = e.changedTouches[0].screenY;
+            handleSwipe();
+        }, { passive: true });
+
+        function handleSwipe() {
+            if (!gameActive || p1.isGameOver) return;
+            const dx = touchEndX - touchStartX;
+            const dy = touchEndY - touchStartY;
+            const absDx = Math.abs(dx);
+            const absDy = Math.abs(dy);
+
+            // Ngưỡng tối thiểu để tính là vuốt (swipe threshold) - Đã giảm để nhạy hơn trên mobile
+            if (Math.max(absDx, absDy) > 18) {
+                if (absDx > absDy) {
+                    // Vuốt ngang (Trái / Phải)
+                    if (dx > 0) {
+                        if (p1.currentLane < 1) {
+                            p1.currentLane++;
+                            p1.targetX = p1.startX + p1.currentLane * config.laneWidth;
+                        }
+                    } else {
+                        if (p1.currentLane > -1) {
+                            p1.currentLane--;
+                            p1.targetX = p1.startX + p1.currentLane * config.laneWidth;
+                        }
+                    }
+                } else {
+                    // Vuốt dọc (Lên / Xuống)
+                    if (dy < 0) {
+                        // Vuốt Lên -> Nhảy
+                        if (p1.isGrounded && !p1.isSliding) {
+                            playSynthJump();
+                            p1.velY = config.jumpForce;
+                            p1.isGrounded = false;
+                        }
+                    } else {
+                        // Vuốt Xuống -> Trượt
+                        if (p1.isGrounded && !p1.isSliding) {
+                            playSynthSlide();
+                            p1.isSliding = true;
+                            p1.slideTimer = 30;
+                            p1.ship.scale.y = 0.35;
+                            p1.ship.position.y = 0.12;
+                        }
+                    }
+                }
+            }
+        }
 
         // Bắt đầu ứng dụng
         animate();

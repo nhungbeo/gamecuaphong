@@ -17,13 +17,13 @@
         /* CSS cho điều khiển di động */
         .mobile-btn {
             position: absolute;
-            width: 70px;
-            height: 70px;
+            width: 85px;
+            height: 85px;
             border-radius: 50%;
             color: white;
             font-weight: 800;
-            border: 2px solid rgba(255, 255, 255, 0.4);
-            backdrop-filter: blur(4px);
+            border: 3px solid rgba(255, 255, 255, 0.5);
+            backdrop-filter: blur(6px);
             z-index: 1000;
             display: none;
             justify-content: center;
@@ -32,37 +32,58 @@
             user-select: none;
         }
         #mobile-btn-shoot {
-            bottom: 120px;
+            bottom: 140px;
             right: 40px;
-            background: rgba(220, 38, 38, 0.6);
-            border-color: rgba(220, 38, 38, 0.8);
-            font-size: 14px;
+            background: rgba(220, 38, 38, 0.7);
+            border-color: rgba(220, 38, 38, 0.9);
+            font-size: 16px;
         }
         #mobile-btn-shoot:active {
-            background: rgba(220, 38, 38, 0.9);
+            background: rgba(220, 38, 38, 0.95);
+            transform: scale(0.9);
         }
         #mobile-btn-jump {
             bottom: 40px;
-            right: 130px;
-            background: rgba(71, 85, 105, 0.6);
-            font-size: 12px;
+            right: 150px;
+            background: rgba(71, 85, 105, 0.7);
+            font-size: 14px;
         }
         #mobile-btn-jump:active {
-            background: rgba(71, 85, 105, 0.9);
+            background: rgba(71, 85, 105, 0.95);
+            transform: scale(0.9);
         }
         #mobile-btn-flash {
             bottom: 40px;
             right: 40px;
-            background: rgba(234, 179, 8, 0.4);
-            border-color: rgba(234, 179, 8, 0.6);
-            font-size: 12px;
+            background: rgba(234, 179, 8, 0.5);
+            border-color: rgba(234, 179, 8, 0.7);
+            font-size: 14px;
         }
         #mobile-btn-flash:active {
-            background: rgba(234, 179, 8, 0.7);
+            background: rgba(234, 179, 8, 0.8);
+            transform: scale(0.9);
+        }
+
+        @media (max-width: 920px) and (orientation: portrait) {
+            #rotate-device-prompt {
+                opacity: 1 !important;
+                pointer-events: auto !important;
+            }
+        }
+        @media (min-width: 921px), (orientation: landscape) {
+            #rotate-device-prompt {
+                display: none !important;
+            }
         }
     </style>
 </head>
-<body>
+<body class="select-none touch-none overflow-hidden fixed w-full h-full">
+    <!-- Màn hình yêu cầu xoay màn hình khi chơi trên điện thoại dọc -->
+    <div id="rotate-device-prompt" class="fixed inset-0 bg-slate-950 flex flex-col items-center justify-center z-[99999] text-center p-6 transition-all duration-300 pointer-events-none opacity-0" style="font-family: sans-serif;">
+        <span class="text-6xl animate-bounce" style="font-size: 60px; display: block; margin-bottom: 15px;">🔄📱</span>
+        <h3 class="text-2xl font-extrabold text-white uppercase tracking-wide" style="font-size: 24px; color: #fff; margin-bottom: 8px;">Vui lòng xoay ngang màn hình</h3>
+        <p class="text-sm text-slate-400 max-w-xs" style="font-size: 14px; color: #888;">Xoay ngang điện thoại và bật tự động xoay màn hình để có trải nghiệm chơi game tốt nhất.</p>
+    </div>
     <div id="crosshair"></div>
     <div id="click-to-start">CLICK HOẶC CHẠM ĐỂ BẮT ĐẦU</div>
     
@@ -93,7 +114,7 @@
     <div id="ui-container" class="text-white bg-black/60 p-4 rounded-lg border border-gray-500">
         <h1 class="text-xl font-bold text-red-500">SURVIVAL HORROR</h1>
         <div id="p1-hud">
-            <p class="text-xs text-cyan-400 font-bold">Điều khiển: W,A,S,D + Chuột + Click (F: Đèn pin)</p>
+            <p class="text-xs text-cyan-400 font-bold">Điều khiển: WASD / Mũi tên + Chuột + Click (F: Đèn pin, R: Thay đạn)</p>
             <div class="mt-1 flex items-center gap-2">
                 <span>Máu:</span>
                 <div class="w-32 h-3 bg-gray-700 rounded-full overflow-hidden">
@@ -101,7 +122,7 @@
                 </div>
             </div>
             <div class="text-xs font-mono mt-1">
-                Đạn: <span id="ammo-count">5</span>/5 | Tổng: <span id="total-ammo">25</span>
+                Đạn: <span id="ammo-count">8</span>/8 | Tổng: <span id="total-ammo">40</span>
                 <span id="reload-text" class="text-red-400 ml-2 hidden animate-pulse">Reload...</span>
             </div>
             <div class="text-[10px] font-mono mt-0.5">
@@ -110,6 +131,12 @@
         </div>
 
         <p class="mt-2 text-yellow-400 font-bold">Tiêu diệt: <span id="kill-count">0</span>/<span id="target-kills">15</span></p>
+        
+        <!-- Volume Control Slider -->
+        <div class="mt-3 pt-2 border-t border-gray-700/60 flex items-center gap-2 pointer-events-auto text-xs">
+            <button id="btn-mute-toggle" onclick="toggleMuteState()" style="background:transparent; border:none; color:#38bdf8; font-size:14px; cursor:pointer; outline:none;">🔊</button>
+            <input type="range" id="volume-slider" min="0" max="1" step="0.1" value="0.5" oninput="changeVolume(this.value)" style="width: 70px; accent-color: #38bdf8; cursor: pointer;">
+        </div>
     </div>
 
     <div id="game-over-screen">
@@ -124,7 +151,7 @@
 
     <script>
         let scene, camera, renderer, bullets = [], monsters = [], flashlight;
-        let killCount = 0, health = 100, ammo = 5, totalAmmo = 25;
+        let killCount = 0, health = 100, ammo = 8, totalAmmo = 40;
         let lastDamageTime = 0, isReloading = false, velocityY = 0;
         const moveState = { w: false, a: false, s: false, d: false };
         let gameStarted = false;
@@ -155,6 +182,16 @@
         async function startPlay() {
             await Tone.start();
             document.getElementById('start-menu').style.display = 'none';
+            
+            // Yêu cầu khóa xoay ngang Landscape trên thiết bị di động nếu được hỗ trợ
+            if (isTouchDevice && document.documentElement.requestFullscreen) {
+                document.documentElement.requestFullscreen().then(() => {
+                    if (screen.orientation && screen.orientation.lock) {
+                        screen.orientation.lock('landscape').catch(e => console.log('Không thể khóa xoay ngang:', e));
+                    }
+                }).catch(e => console.log('Không thể vào toàn màn hình:', e));
+            }
+            
             gameStarted = true;
             init();
         }
@@ -166,6 +203,43 @@
                 flashlightOnDuration = 0;
             }
         }
+
+        let isMuted = false;
+        let previousVolume = 0.5;
+
+        function toggleMuteState() {
+            const btn = document.getElementById('btn-mute-toggle');
+            const slider = document.getElementById('volume-slider');
+            isMuted = !isMuted;
+            if (isMuted) {
+                previousVolume = parseFloat(slider.value);
+                changeVolume(0);
+                slider.value = 0;
+                btn.innerText = '🔇';
+            } else {
+                changeVolume(previousVolume > 0 ? previousVolume : 0.5);
+                slider.value = previousVolume > 0 ? previousVolume : 0.5;
+                btn.innerText = '🔊';
+            }
+        }
+        window.toggleMuteState = toggleMuteState;
+
+        function changeVolume(val) {
+            const btn = document.getElementById('btn-mute-toggle');
+            const volume = parseFloat(val);
+            // Tone.js volume sử dụng đơn vị Decibel. Ta convert 0-1 sang dB.
+            if (volume === 0) {
+                Tone.Destination.volume.value = -Infinity;
+                isMuted = true;
+                btn.innerText = '🔇';
+            } else {
+                // Biểu diễn decibel: 20 * log10(volume)
+                Tone.Destination.volume.value = 20 * Math.log10(volume);
+                isMuted = false;
+                btn.innerText = '🔊';
+            }
+        }
+        window.changeVolume = changeVolume;
 
         const gunSynth = new Tone.Synth({ oscillator: { type: 'square' }, envelope: { attack: 0.001, decay: 0.1, sustain: 0, release: 0.1 } }).toDestination();
 
@@ -229,12 +303,21 @@
             Object.keys(moveState).forEach(k => moveState[k] = false);
         };
         window.addEventListener('keydown', (e) => { 
-            if(e.key.toLowerCase() in moveState) moveState[e.key.toLowerCase()] = true; 
-            if(e.key.toLowerCase() === 'f') toggleFlashlight();
-            if(e.key === ' ' && camera.position.y <= 1.6) velocityY = 0.2;
+            const key = e.key.toLowerCase();
+            if (key === 'w' || e.key === 'ArrowUp') moveState.w = true;
+            if (key === 's' || e.key === 'ArrowDown') moveState.s = true;
+            if (key === 'a' || e.key === 'ArrowLeft') moveState.a = true;
+            if (key === 'd' || e.key === 'ArrowRight') moveState.d = true;
+            if (key === 'f') toggleFlashlight();
+            if (key === 'r' && !isReloading && ammo < 8 && totalAmmo > 0) reload();
+            if (e.key === ' ' && camera.position.y <= 1.6) velocityY = 0.2;
         });
         window.addEventListener('keyup', (e) => { 
-            if(e.key.toLowerCase() in moveState) moveState[e.key.toLowerCase()] = false; 
+            const key = e.key.toLowerCase();
+            if (key === 'w' || e.key === 'ArrowUp') moveState.w = false;
+            if (key === 's' || e.key === 'ArrowDown') moveState.s = false;
+            if (key === 'a' || e.key === 'ArrowLeft') moveState.a = false;
+            if (key === 'd' || e.key === 'ArrowRight') moveState.d = false;
         });
         window.addEventListener('blur', resetMovement);
         
@@ -323,7 +406,7 @@
                 let dx = touch.clientX - joystickStart.x;
                 let dy = touch.clientY - joystickStart.y;
                 const dist = Math.sqrt(dx*dx + dy*dy);
-                const maxDist = 35;
+                const maxDist = 50;
 
                 if (dist > maxDist) {
                     dx = (dx / dist) * maxDist;
@@ -419,7 +502,7 @@
             isReloading = true;
             document.getElementById('reload-text').classList.remove('hidden');
             setTimeout(() => { 
-                ammo = Math.min(5, totalAmmo); 
+                ammo = Math.min(8, totalAmmo); 
                 isReloading = false; 
                 document.getElementById('ammo-count').innerText = ammo; 
                 document.getElementById('total-ammo').innerText = totalAmmo;
@@ -490,7 +573,7 @@
                 const yaw = camera.rotation.y;
                 const f = new THREE.Vector3(0, 0, -1).applyEuler(new THREE.Euler(0, yaw, 0));
                 const r = new THREE.Vector3(1, 0, 0).applyEuler(new THREE.Euler(0, yaw, 0));
-                const speed = 0.15;
+                const speed = 0.20;
                 const nextPos = camera.position.clone();
                 if (moveState.w) nextPos.add(f.multiplyScalar(speed));
                 if (moveState.s) nextPos.add(f.multiplyScalar(-speed));

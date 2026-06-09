@@ -262,6 +262,11 @@
                 <div class="control-row" id="p1-fire-desc" style="margin-top: 5px;">Bắn đạn Laser: <span class="key">Spacebar</span> hoặc Click chuột trái</div>
                 <div class="control-row" style="margin-top: 5px; color: #00ff66;">Mẹo: Đừng đâm vào thiên thạch!</div>
             </div>
+            <!-- Volume Control Panel -->
+            <div class="controls-panel" style="margin-top: 10px; display: flex; align-items: center; gap: 8px; pointer-events: auto;">
+                <button id="btn-mute-toggle" onclick="toggleMuteState()" style="background:transparent; border:none; color:#00f0ff; font-size:16px; cursor:pointer;">🔊</button>
+                <input type="range" id="volume-slider" min="0" max="1" step="0.1" value="0.5" oninput="changeVolume(this.value)" style="width: 80px; accent-color: #00f0ff; cursor: pointer;">
+            </div>
         </div>
 
         <div id="game-over-screen">
@@ -281,13 +286,54 @@
     <script>
         // --- ÂM THANH GIẢ LẬP QUA WEB AUDIO API ---
         const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        let mainVolumeNode = audioCtx.createGain();
+        mainVolumeNode.gain.setValueAtTime(0.5, audioCtx.currentTime);
+        mainVolumeNode.connect(audioCtx.destination);
+
+        let isMuted = false;
+        let previousVolume = 0.5;
+
+        function toggleMuteState() {
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+            const btn = document.getElementById('btn-mute-toggle');
+            const slider = document.getElementById('volume-slider');
+            isMuted = !isMuted;
+            if (isMuted) {
+                previousVolume = parseFloat(slider.value);
+                changeVolume(0);
+                slider.value = 0;
+                btn.innerText = '🔇';
+            } else {
+                changeVolume(previousVolume > 0 ? previousVolume : 0.5);
+                slider.value = previousVolume > 0 ? previousVolume : 0.5;
+                btn.innerText = '🔊';
+            }
+        }
+        window.toggleMuteState = toggleMuteState;
+
+        function changeVolume(val) {
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+            const btn = document.getElementById('btn-mute-toggle');
+            const volume = parseFloat(val);
+            if (mainVolumeNode) {
+                mainVolumeNode.gain.setValueAtTime(volume, audioCtx.currentTime);
+            }
+            if (volume === 0) {
+                isMuted = true;
+                btn.innerText = '🔇';
+            } else {
+                isMuted = false;
+                btn.innerText = '🔊';
+            }
+        }
+        window.changeVolume = changeVolume;
 
         function playSynthLaser() {
             if (audioCtx.state === 'suspended') audioCtx.resume();
             const osc = audioCtx.createOscillator();
             const gain = audioCtx.createGain();
             osc.connect(gain);
-            gain.connect(audioCtx.destination);
+            gain.connect(mainVolumeNode);
             
             osc.type = 'sawtooth';
             osc.frequency.setValueAtTime(800, audioCtx.currentTime);
@@ -305,7 +351,7 @@
             const osc = audioCtx.createOscillator();
             const gain = audioCtx.createGain();
             osc.connect(gain);
-            gain.connect(audioCtx.destination);
+            gain.connect(mainVolumeNode);
 
             osc.type = 'triangle';
             osc.frequency.setValueAtTime(150, audioCtx.currentTime);

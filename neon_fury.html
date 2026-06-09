@@ -306,8 +306,13 @@
         </div>
 
         <!-- Float Info (FPS/Settings) -->
-        <div class="absolute bottom-2 left-4 text-[10px] text-slate-500 tracking-wider pointer-events-none z-10 select-none hidden md:block">
-            Vũ khí: WASD / SPACE • Nhấn M để bật/tắt nhạc
+        <div class="absolute bottom-2 left-4 flex items-center gap-3 text-[10px] text-slate-500 tracking-wider pointer-events-auto z-10 select-none">
+            <span class="hidden md:inline">Vũ khí: WASD / SPACE • Nhấn M để bật/tắt nhạc</span>
+            <!-- Volume Control -->
+            <div class="flex items-center gap-1.5 bg-slate-950/80 p-1.5 rounded-lg border border-pink-500/30">
+                <button id="btn-mute-toggle" onclick="toggleMuteState()" style="background:transparent; border:none; color:#ff007f; font-size:12px; cursor:pointer; outline:none;">🔊</button>
+                <input type="range" id="volume-slider" min="0" max="1" step="0.1" value="0.5" oninput="changeVolume(this.value)" style="width: 60px; accent-color: #ff007f; cursor: pointer; height: 3px;">
+            </div>
         </div>
     </div>
 
@@ -323,12 +328,16 @@
                 this.musicInterval = null;
                 this.musicPlaying = false;
                 this.muted = false;
+                this.mainVolumeNode = null;
             }
 
             init() {
                 if (this.ctx) return;
                 try {
                     this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+                    this.mainVolumeNode = this.ctx.createGain();
+                    this.mainVolumeNode.gain.setValueAtTime(0.5, this.ctx.currentTime);
+                    this.mainVolumeNode.connect(this.ctx.destination);
                 } catch(e) {
                     console.log("Audio not supported");
                 }
@@ -349,7 +358,7 @@
                 gain.gain.linearRampToValueAtTime(0.01, this.ctx.currentTime + duration);
 
                 osc.connect(gain);
-                gain.connect(this.ctx.destination);
+                gain.connect(this.mainVolumeNode || this.ctx.destination);
 
                 osc.start();
                 osc.stop(this.ctx.currentTime + duration);
@@ -370,7 +379,7 @@
                 gain.gain.linearRampToValueAtTime(0.01, this.ctx.currentTime + duration);
 
                 osc.connect(gain);
-                gain.connect(this.ctx.destination);
+                gain.connect(this.mainVolumeNode || this.ctx.destination);
 
                 osc.start();
                 osc.stop(this.ctx.currentTime + duration);
@@ -390,7 +399,7 @@
                 gain.gain.linearRampToValueAtTime(0.01, this.ctx.currentTime + 0.1);
 
                 osc.connect(gain);
-                gain.connect(this.ctx.destination);
+                gain.connect(this.mainVolumeNode || this.ctx.destination);
 
                 osc.start();
                 osc.stop(this.ctx.currentTime + 0.1);
@@ -413,7 +422,7 @@
                     gain.gain.linearRampToValueAtTime(0.01, now + index * 0.08 + 0.15);
                     
                     osc.connect(gain);
-                    gain.connect(this.ctx.destination);
+                    gain.connect(this.mainVolumeNode || this.ctx.destination);
                     
                     osc.start(now + index * 0.08);
                     osc.stop(now + index * 0.08 + 0.15);
@@ -446,7 +455,7 @@
                     gain.gain.linearRampToValueAtTime(0.01, this.ctx.currentTime + quarterNote * 0.8);
 
                     osc.connect(gain);
-                    gain.connect(this.ctx.destination);
+                    gain.connect(this.mainVolumeNode || this.ctx.destination);
 
                     osc.start();
                     osc.stop(this.ctx.currentTime + quarterNote * 0.8);
@@ -484,7 +493,7 @@
 
                 noise.connect(filter);
                 filter.connect(gain);
-                gain.connect(this.ctx.destination);
+                gain.connect(this.mainVolumeNode || this.ctx.destination);
 
                 noise.start();
                 noise.stop(this.ctx.currentTime + 0.05);
@@ -499,11 +508,54 @@
 
             toggleMute() {
                 this.muted = !this.muted;
+                if (this.mainVolumeNode) {
+                    this.mainVolumeNode.gain.setValueAtTime(this.muted ? 0 : 0.5, this.ctx.currentTime);
+                }
                 return this.muted;
             }
         }
 
         const sounds = new SoundEngine();
+
+        let isMutedGlobal = false;
+        let previousVolumeGlobal = 0.5;
+
+        function toggleMuteState() {
+            sounds.init();
+            const btn = document.getElementById('btn-mute-toggle');
+            const slider = document.getElementById('volume-slider');
+            isMutedGlobal = !isMutedGlobal;
+            if (isMutedGlobal) {
+                previousVolumeGlobal = parseFloat(slider.value);
+                changeVolume(0);
+                slider.value = 0;
+                btn.innerText = '🔇';
+            } else {
+                changeVolume(previousVolumeGlobal > 0 ? previousVolumeGlobal : 0.5);
+                slider.value = previousVolumeGlobal > 0 ? previousVolumeGlobal : 0.5;
+                btn.innerText = '🔊';
+            }
+        }
+        window.toggleMuteState = toggleMuteState;
+
+        function changeVolume(val) {
+            sounds.init();
+            const btn = document.getElementById('btn-mute-toggle');
+            const volume = parseFloat(val);
+            if (sounds.mainVolumeNode) {
+                sounds.mainVolumeNode.gain.setValueAtTime(volume, sounds.ctx.currentTime);
+            }
+            if (volume === 0) {
+                sounds.muted = true;
+                isMutedGlobal = true;
+                btn.innerText = '🔇';
+            } else {
+                sounds.muted = false;
+                isMutedGlobal = false;
+                btn.innerText = '🔊';
+            }
+        }
+        window.changeVolume = changeVolume;
     </script>
 
     <script>

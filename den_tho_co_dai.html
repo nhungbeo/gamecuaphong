@@ -2,11 +2,11 @@
 <html lang="vi">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>Tứ Thần Thú: Đền Thờ Cổ Đại</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        body { margin: 0; overflow: hidden; font-family: 'Inter', sans-serif; background-color: #020617; }
+        html, body { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; position: fixed; touch-action: none; font-family: 'Inter', sans-serif; background-color: #020617; }
         canvas { display: block; background: radial-gradient(circle at center, #0b1329 0%, #020617 100%); }
         #ui-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; }
         .interactive { pointer-events: auto; }
@@ -16,9 +16,26 @@
             50% { border-color: rgba(239, 68, 68, 0.6); box-shadow: 0 0 25px rgba(239, 68, 68, 0.3); }
         }
         .glowing-panel { animation: magicGlow 4s infinite; }
+        @media (max-width: 920px) and (orientation: portrait) {
+            #rotate-device-prompt {
+                opacity: 1 !important;
+                pointer-events: auto !important;
+            }
+        }
+        @media (min-width: 921px), (orientation: landscape) {
+            #rotate-device-prompt {
+                display: none !important;
+            }
+        }
     </style>
 </head>
 <body>
+    <!-- Màn hình yêu cầu xoay màn hình khi chơi trên điện thoại dọc -->
+    <div id="rotate-device-prompt" class="fixed inset-0 bg-slate-950 flex flex-col items-center justify-center z-[99999] text-center p-6 transition-all duration-300 pointer-events-none opacity-0" style="font-family: sans-serif;">
+        <span class="text-6xl animate-bounce">🔄📱</span>
+        <h3 class="text-2xl font-extrabold text-white mt-5 uppercase tracking-wide">Vui lòng xoay ngang màn hình</h3>
+        <p class="text-sm text-slate-400 mt-2 max-w-xs">Xoay ngang điện thoại và bật tự động xoay màn hình để có trải nghiệm chơi game tốt nhất.</p>
+    </div>
 
     <!-- Màn hình Bắt đầu Game -->
     <div id="start-screen" class="fixed inset-0 bg-slate-950/95 backdrop-blur-md flex flex-col items-center justify-center text-white z-50 transition-opacity duration-300">
@@ -36,7 +53,7 @@
                 <p class="text-red-400">• <strong>Chiến Thắng Ở Ván 5:</strong> Vượt qua 5 đợt đấu dồn dập, tiêu diệt được Chúa Tể Hắc Ám khổng lồ (3500 HP) ở ván cuối sẽ kích hoạt màn hình CHIẾN THẮNG vang dội!</p>
             </div>
 
-            <button onclick="startGame()" class="w-full mt-4 py-4 bg-gradient-to-r from-red-600 via-orange-600 to-yellow-500 hover:from-red-500 hover:to-orange-500 text-slate-950 font-black rounded-xl shadow-lg hover:shadow-orange-500/30 active:scale-95 transition-all duration-150 cursor-pointer pointer-events-auto text-base tracking-wider uppercase">
+            <button onclick="startGame()" class="w-full mt-4 py-5 bg-gradient-to-r from-red-600 via-orange-600 to-yellow-500 hover:from-red-500 hover:to-orange-500 text-slate-950 font-black rounded-xl shadow-lg hover:shadow-orange-500/30 active:scale-95 transition-all duration-150 cursor-pointer pointer-events-auto text-lg tracking-wider uppercase">
                 BẢO VỆ PHONG ẤN
             </button>
         </div>
@@ -64,40 +81,46 @@
 
         <!-- Footer: Kỹ năng & Bảng Nâng cấp -->
         <div class="flex flex-col md:flex-row justify-between items-center gap-4 w-full mt-auto pointer-events-auto">
-            <!-- Spell Hotbar -->
-            <div class="flex gap-3 bg-slate-900/75 p-2.5 rounded-2xl border border-slate-800/80 backdrop-blur-md shadow-2xl interactive">
-                <button onclick="triggerSpell(0)" class="relative flex flex-col items-center justify-center w-14 h-14 rounded-xl border border-cyan-500/40 bg-cyan-950/30 text-cyan-400 transition-all hover:scale-105 active:scale-95 focus:outline-none shadow-lg">
-                    <span class="text-xl">🐉</span> <span class="text-[9px] font-black uppercase tracking-wider">Lôi (1)</span>
+            <!-- Spell Hotbar (Được phóng TO trên mobile để dễ ấn) -->
+            <div class="flex gap-4 bg-slate-900/75 p-3 rounded-2xl border border-slate-800/80 backdrop-blur-md shadow-2xl interactive">
+                <button onclick="triggerSpell(0)" class="relative flex flex-col items-center justify-center w-22 h-22 md:w-14 md:h-14 rounded-xl border border-cyan-500/40 bg-cyan-950/30 text-cyan-400 transition-all hover:scale-105 active:scale-95 focus:outline-none shadow-lg">
+                    <span class="text-3xl md:text-xl">🐉</span> <span class="text-xs md:text-[9px] font-black uppercase tracking-wider">Lôi (1)</span>
                     <div id="cooldown-0" class="absolute inset-0 bg-slate-950/85 rounded-xl flex items-center justify-center text-[10px] font-black text-cyan-300 transition-all" style="height: 100%">100%</div>
                 </button>
-                <button onclick="triggerSpell(1)" class="relative flex flex-col items-center justify-center w-14 h-14 rounded-xl border border-slate-400/40 bg-slate-850/30 text-slate-300 transition-all hover:scale-105 active:scale-95 focus:outline-none shadow-lg">
-                    <span class="text-xl">🐅</span> <span class="text-[9px] font-black uppercase tracking-wider">Băng (2)</span>
+                <button onclick="triggerSpell(1)" class="relative flex flex-col items-center justify-center w-22 h-22 md:w-14 md:h-14 rounded-xl border border-slate-400/40 bg-slate-850/30 text-slate-300 transition-all hover:scale-105 active:scale-95 focus:outline-none shadow-lg">
+                    <span class="text-3xl md:text-xl">🐅</span> <span class="text-xs md:text-[9px] font-black uppercase tracking-wider">Băng (2)</span>
                     <div id="cooldown-1" class="absolute inset-0 bg-slate-950/85 rounded-xl flex items-center justify-center text-[10px] font-black text-slate-300 transition-all" style="height: 100%">100%</div>
                 </button>
-                <button onclick="triggerSpell(2)" class="relative flex flex-col items-center justify-center w-14 h-14 rounded-xl border border-emerald-500/40 bg-emerald-950/30 text-emerald-400 transition-all hover:scale-105 active:scale-95 focus:outline-none shadow-lg">
-                    <span class="text-xl">🐢</span> <span class="text-[9px] font-black uppercase tracking-wider">Thủ (3)</span>
+                <button onclick="triggerSpell(2)" class="relative flex flex-col items-center justify-center w-22 h-22 md:w-14 md:h-14 rounded-xl border border-emerald-500/40 bg-emerald-950/30 text-emerald-400 transition-all hover:scale-105 active:scale-95 focus:outline-none shadow-lg">
+                    <span class="text-3xl md:text-xl">🐢</span> <span class="text-xs md:text-[9px] font-black uppercase tracking-wider">Thủ (3)</span>
                     <div id="cooldown-2" class="absolute inset-0 bg-slate-950/85 rounded-xl flex items-center justify-center text-[10px] font-black text-emerald-300 transition-all" style="height: 100%">100%</div>
                 </button>
-                <button onclick="triggerSpell(3)" class="relative flex flex-col items-center justify-center w-14 h-14 rounded-xl border border-red-500/40 bg-red-950/30 text-red-400 transition-all hover:scale-105 active:scale-95 focus:outline-none shadow-lg">
-                    <span class="text-xl">🦅</span> <span class="text-[9px] font-black uppercase tracking-wider">Hỏa (4)</span>
+                <button onclick="triggerSpell(3)" class="relative flex flex-col items-center justify-center w-22 h-22 md:w-14 md:h-14 rounded-xl border border-red-500/40 bg-red-950/30 text-red-400 transition-all hover:scale-105 active:scale-95 focus:outline-none shadow-lg">
+                    <span class="text-3xl md:text-xl">🦅</span> <span class="text-xs md:text-[9px] font-black uppercase tracking-wider">Hỏa (4)</span>
                     <div id="cooldown-3" class="absolute inset-0 bg-slate-950/85 rounded-xl flex items-center justify-center text-[10px] font-black text-red-300 transition-all" style="height: 100%">100%</div>
                 </button>
             </div>
 
-            <!-- Bảng Nâng cấp giới hạn MAX 5 -->
-            <div class="flex gap-2.5 bg-slate-900/75 p-2.5 rounded-2xl border border-slate-800/80 backdrop-blur-md shadow-2xl interactive">
-                <button id="btn-up-dmg" onclick="buyUpgrade('dmg')" class="flex flex-col items-center justify-center px-3.5 py-1.5 rounded-xl border border-amber-500/30 bg-amber-950/20 text-amber-400 text-xs font-bold hover:bg-amber-900/30 transition-all active:scale-95">
+            <!-- Bảng Nâng cấp giới hạn MAX 5 (Phóng to trên mobile) -->
+            <div class="flex gap-3 bg-slate-900/75 p-3 rounded-2xl border border-slate-800/80 backdrop-blur-md shadow-2xl interactive">
+                <button id="btn-up-dmg" onclick="buyUpgrade('dmg')" class="flex flex-col items-center justify-center px-6 py-4 md:px-3.5 md:py-1.5 rounded-xl border border-amber-500/30 bg-amber-950/20 text-amber-400 text-sm md:text-xs font-bold hover:bg-amber-900/30 transition-all active:scale-95">
                     <span class="flex items-center gap-1">⚔️ Sức Mạnh <span id="star-dmg" class="text-yellow-500"></span></span>
-                    <span id="cost-dmg" class="text-[9px] text-slate-400 mt-0.5">Giá: 15 Hồn</span>
+                    <span id="cost-dmg" class="text-xs md:text-[9px] text-slate-400 mt-0.5">Giá: 15 Hồn</span>
                 </button>
-                <button id="btn-up-spd" onclick="buyUpgrade('spd')" class="flex flex-col items-center justify-center px-3.5 py-1.5 rounded-xl border border-cyan-500/30 bg-cyan-950/20 text-cyan-400 text-xs font-bold hover:bg-cyan-900/30 transition-all active:scale-95">
+                <button id="btn-up-spd" onclick="buyUpgrade('spd')" class="flex flex-col items-center justify-center px-6 py-4 md:px-3.5 md:py-1.5 rounded-xl border border-cyan-500/30 bg-cyan-950/20 text-cyan-400 text-sm md:text-xs font-bold hover:bg-cyan-900/30 transition-all active:scale-95">
                     <span class="flex items-center gap-1">⚡ Tốc Đánh <span id="star-spd" class="text-cyan-400"></span></span>
-                    <span id="cost-spd" class="text-[9px] text-slate-400 mt-0.5">Giá: 20 Hồn</span>
+                    <span id="cost-spd" class="text-xs md:text-[9px] text-slate-400 mt-0.5">Giá: 20 Hồn</span>
                 </button>
-                <button onclick="buyUpgrade('heal')" class="flex flex-col items-center justify-center px-3.5 py-1.5 rounded-xl border border-rose-500/30 bg-rose-950/20 text-rose-400 text-xs font-bold hover:bg-rose-900/30 transition-all active:scale-95">
+                <button onclick="buyUpgrade('heal')" class="flex flex-col items-center justify-center px-6 py-4 md:px-3.5 md:py-1.5 rounded-xl border border-rose-500/30 bg-rose-950/20 text-rose-400 text-sm md:text-xs font-bold hover:bg-rose-900/30 transition-all active:scale-95">
                     <span class="flex items-center gap-1">💚 Hồi Máu</span>
-                    <span id="cost-heal" class="text-[9px] text-slate-400 mt-0.5">Giá: 10 Hồn</span>
+                    <span id="cost-heal" class="text-xs md:text-[9px] text-slate-400 mt-0.5">Giá: 10 Hồn</span>
                 </button>
+            </div>
+            
+            <!-- Volume Control Slider (Phù hợp trên cả mobile/PC) -->
+            <div class="flex items-center gap-2 bg-slate-900/75 p-3 rounded-2xl border border-slate-800/80 backdrop-blur-md shadow-2xl interactive text-xs">
+                <button id="btn-mute-toggle" onclick="toggleMuteState()" class="text-yellow-400 hover:text-yellow-300 transition-colors text-base focus:outline-none">🔊</button>
+                <input type="range" id="volume-slider" min="0" max="1" step="0.1" value="0.5" oninput="changeVolume(this.value)" class="w-20 accent-yellow-500 h-1 bg-slate-700 rounded-lg appearance-none cursor-pointer">
             </div>
         </div>
     </div>
@@ -155,7 +178,7 @@
         let waveActive = false;
         let gameActive = false;
         let bossSpawned = false;
-        let altar = { x: 0, y: 0, r: 90, hp: 100, maxHp: 100 };
+        let altar = { x: 0, y: 0, r: 90, hp: 150, maxHp: 150 };
         let player = { angle: -Math.PI / 2, fireRate: 15, currentCooldown: 0 };
 
         let enemies = [];
@@ -184,15 +207,56 @@
         };
 
         let audioCtx = null;
+        let mainVolumeNode = null;
+        let isMuted = false;
+        let previousVolume = 0.5;
 
         function initAudio() {
             if (!audioCtx) {
                 audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                mainVolumeNode = audioCtx.createGain();
+                mainVolumeNode.gain.setValueAtTime(0.5, audioCtx.currentTime);
+                mainVolumeNode.connect(audioCtx.destination);
             }
             if (audioCtx.state === 'suspended') {
                 audioCtx.resume();
             }
         }
+
+        function toggleMuteState() {
+            initAudio();
+            const btn = document.getElementById('btn-mute-toggle');
+            const slider = document.getElementById('volume-slider');
+            isMuted = !isMuted;
+            if (isMuted) {
+                previousVolume = parseFloat(slider.value);
+                changeVolume(0);
+                slider.value = 0;
+                btn.innerText = '🔇';
+            } else {
+                changeVolume(previousVolume > 0 ? previousVolume : 0.5);
+                slider.value = previousVolume > 0 ? previousVolume : 0.5;
+                btn.innerText = '🔊';
+            }
+        }
+        window.toggleMuteState = toggleMuteState;
+
+        function changeVolume(val) {
+            initAudio();
+            const btn = document.getElementById('btn-mute-toggle');
+            const volume = parseFloat(val);
+            if (mainVolumeNode) {
+                mainVolumeNode.gain.setValueAtTime(volume, audioCtx.currentTime);
+            }
+            if (volume === 0) {
+                isMuted = true;
+                btn.innerText = '🔇';
+            } else {
+                isMuted = false;
+                btn.innerText = '🔊';
+            }
+        }
+        window.changeVolume = changeVolume;
 
         function triggerScreenShake(duration, intensity) {
             shakeTime = duration;
@@ -205,7 +269,7 @@
             const osc = audioCtx.createOscillator();
             const gain = audioCtx.createGain();
             osc.connect(gain);
-            gain.connect(audioCtx.destination);
+            gain.connect(mainVolumeNode || audioCtx.destination);
             osc.type = 'sine';
             osc.frequency.setValueAtTime(600, audioCtx.currentTime);
             osc.frequency.exponentialRampToValueAtTime(100, audioCtx.currentTime + 0.08);
@@ -221,7 +285,7 @@
             const osc = audioCtx.createOscillator();
             const gain = audioCtx.createGain();
             osc.connect(gain);
-            gain.connect(audioCtx.destination);
+            gain.connect(mainVolumeNode || audioCtx.destination);
             
             if (type === 0) { osc.type = 'sawtooth'; osc.frequency.setValueAtTime(250, audioCtx.currentTime); osc.frequency.exponentialRampToValueAtTime(1300, audioCtx.currentTime + 0.5); gain.gain.setValueAtTime(0.1, audioCtx.currentTime); }
             else if (type === 1) { osc.type = 'triangle'; osc.frequency.setValueAtTime(700, audioCtx.currentTime); osc.frequency.exponentialRampToValueAtTime(200, audioCtx.currentTime + 0.5); gain.gain.setValueAtTime(0.15, audioCtx.currentTime); }
@@ -239,7 +303,7 @@
             const osc = audioCtx.createOscillator();
             const gain = audioCtx.createGain();
             osc.connect(gain);
-            gain.connect(audioCtx.destination);
+            gain.connect(mainVolumeNode || audioCtx.destination);
             osc.type = 'square';
             osc.frequency.setValueAtTime(65, audioCtx.currentTime);
             osc.frequency.exponentialRampToValueAtTime(10, audioCtx.currentTime + 0.3);
@@ -314,7 +378,7 @@
                     this.hp = 60 + wave * 30; 
                     this.maxHp = this.hp;
                     this.size = 20 + Math.random() * 8;
-                    this.speed = 1.25 + Math.random() * 0.55; 
+                    this.speed = 0.95 + Math.random() * 0.4; 
                     
                     if (type === 'demon') {
                         this.size += 8; this.hp *= 2.2; this.maxHp = this.hp; this.speed *= 0.65; this.color = '#ef4444';
@@ -431,6 +495,19 @@
 
         function startGame() {
             initAudio();
+            // Lock landscape and enter fullscreen if supported on touch devices
+            if ('ontouchstart' in window) {
+                const docEl = document.documentElement;
+                if (docEl.requestFullscreen) {
+                    docEl.requestFullscreen().then(() => {
+                        if (screen.orientation && screen.orientation.lock) {
+                            screen.orientation.lock('landscape').catch(() => {});
+                        }
+                    }).catch(() => {});
+                } else if (docEl.webkitRequestFullscreen) {
+                    docEl.webkitRequestFullscreen();
+                }
+            }
             gameActive = true;
             startScreen.classList.add('opacity-0');
             setTimeout(() => { startScreen.classList.add('hidden'); }, 300);
@@ -438,7 +515,7 @@
         }
 
         function resetGame() {
-            score = 0; wave = 1; altar.hp = 100; altar.maxHp = 100;
+            score = 0; wave = 1; altar.hp = 150; altar.maxHp = 150;
             enemies = []; projectiles = []; particles = []; activeSpells = [];
             spellGauges = [100, 100, 100, 100]; bossSpawned = false; summonedBeasts = [];
             player.angle = -Math.PI / 2;
