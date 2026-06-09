@@ -2,7 +2,7 @@
 <html lang="vi">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>NEON FURY: Synthwave Space Shooter</title>
     <!-- Tailwind CSS for sleek overlay menus -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -12,12 +12,18 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
     <style>
-        body {
-            font-family: 'Rajdhani', sans-serif;
-            background-color: #05030a;
+        html, body {
+            width: 100%;
+            height: 100%;
             overflow: hidden;
+            position: fixed;
+            touch-action: none;
+            background-color: #05030a;
             user-select: none;
             -webkit-user-select: none;
+        }
+        body {
+            font-family: 'Rajdhani', sans-serif;
         }
         .retro-font {
             font-family: 'Orbitron', sans-serif;
@@ -65,12 +71,30 @@
         ::-webkit-scrollbar {
             display: none;
         }
+        @media (max-width: 920px) and (orientation: portrait) {
+            #rotate-device-prompt {
+                opacity: 1 !important;
+                pointer-events: auto !important;
+            }
+        }
+        @media (min-width: 921px), (orientation: landscape) {
+            #rotate-device-prompt {
+                display: none !important;
+            }
+        }
     </style>
 </head>
 <body class="flex flex-col items-center justify-center min-h-screen relative text-white">
 
+    <!-- Màn hình yêu cầu xoay màn hình khi chơi trên điện thoại dọc -->
+    <div id="rotate-device-prompt" class="fixed inset-0 bg-slate-950 flex flex-col items-center justify-center z-[99999] text-center p-6 transition-all duration-300 pointer-events-none opacity-0" style="position: fixed; width: 100%; height: 100%; top: 0; left: 0; background-color: #030308; display: flex; align-items: center; justify-content: center; font-family: sans-serif;">
+        <span class="text-6xl animate-bounce" style="font-size: 60px; display: block; margin-bottom: 15px;">🔄📱</span>
+        <h3 class="text-2xl font-extrabold text-white uppercase tracking-wide" style="font-size: 24px; color: #fff; margin-bottom: 8px;">Vui lòng xoay ngang màn hình</h3>
+        <p class="text-sm text-slate-400 max-w-xs" style="font-size: 14px; color: #888;">Xoay ngang điện thoại và bật tự động xoay màn hình để có trải nghiệm chơi game tốt nhất.</p>
+    </div>
+
     <!-- Main game container wrapper mimicking an arcade cabinet console -->
-    <div id="gameContainer" class="relative w-full h-screen max-w-5xl max-h-[850px] bg-black md:rounded-3xl border-4 border-slate-800 shadow-[0_0_50px_rgba(255,0,127,0.3)] overflow-hidden flex flex-col items-center justify-center">
+    <div id="gameContainer" class="relative w-full h-screen max-w-none max-h-none md:max-w-5xl md:max-h-[850px] bg-black md:rounded-3xl md:border-4 md:border-slate-800 md:shadow-[0_0_50px_rgba(255,0,127,0.3)] overflow-hidden flex flex-col items-center justify-center">
         
         <!-- Score HUD top bar (overlayed on top of the game screen) -->
         <div id="topHUD" class="absolute top-0 left-0 w-full p-4 flex justify-between items-center z-20 pointer-events-none select-none opacity-0 transition-opacity duration-500">
@@ -291,17 +315,42 @@
 
         <!-- Virtual Gamepad Overlay (Shown on Mobile) -->
         <div id="mobileControls" class="absolute bottom-6 left-0 w-full px-8 justify-between items-end z-20 pointer-events-none select-none hidden opacity-0 transition-opacity duration-300">
-            <!-- Left Side: Joystick Container -->
-            <div class="w-32 h-32 rounded-full border-2 border-cyan-500/30 bg-cyan-950/10 flex items-center justify-center pointer-events-auto relative active:border-cyan-400" id="joystickZone">
-                <div class="w-12 h-12 rounded-full bg-cyan-500/40 border border-cyan-300 shadow-[0_0_15px_rgba(6,182,212,0.5)] absolute" id="joystickKnob" style="left: calc(50% - 24px); top: calc(50% - 24px);"></div>
+            <!-- Player 1 Controls Group (Left side) -->
+            <div class="flex flex-col items-center gap-4 pointer-events-none">
+                <!-- Nút bắn P1 (Chỉ hiển thị khi chơi 2 người - nằm trên Joystick P1) -->
+                <div id="btnMobileFireP1Container" class="pointer-events-auto hidden">
+                    <div class="w-16 h-16 rounded-full bg-pink-600/50 active:bg-pink-400/80 border-2 border-pink-400 shadow-[0_0_15px_rgba(255,0,127,0.4)] flex items-center justify-center transition-all transform active:scale-95" id="btnMobileFireP1">
+                        <i class="fa-solid fa-crosshairs text-xl text-white"></i>
+                    </div>
+                    <div class="text-[9px] text-pink-400 text-center font-bold mt-1">BẮN P1</div>
+                </div>
+                <!-- Joystick P1 (Luôn hiển thị) -->
+                <div class="w-28 h-28 rounded-full border-2 border-cyan-500/30 bg-cyan-950/10 flex items-center justify-center pointer-events-auto relative active:border-cyan-400" id="joystickZone">
+                    <div class="w-10 h-10 rounded-full bg-cyan-500/40 border border-cyan-300 shadow-[0_0_12px_rgba(6,182,212,0.5)] absolute" id="joystickKnob" style="left: calc(50% - 20px); top: calc(50% - 20px);"></div>
+                </div>
             </div>
 
-            <!-- Right Side: Special Fire Button -->
-            <div class="flex flex-col space-y-4 items-center">
-                <div class="w-20 h-20 rounded-full bg-pink-600/50 hover:bg-pink-500/60 active:bg-pink-400/80 border-2 border-pink-400 shadow-[0_0_20px_rgba(255,0,127,0.4)] flex items-center justify-center pointer-events-auto transition-all transform active:scale-95" id="btnMobileFire">
-                    <i class="fa-solid fa-crosshairs text-3xl text-white"></i>
+            <!-- Player 2 Controls / Single Player Fire Group (Right side) -->
+            <div class="flex flex-col items-center gap-4 pointer-events-none">
+                <!-- Nút bắn P2 (Chỉ hiển thị khi chơi 2 người - nằm trên Joystick P2) -->
+                <div id="btnMobileFireP2Container" class="pointer-events-auto hidden">
+                    <div class="w-16 h-16 rounded-full bg-purple-600/50 active:bg-purple-400/80 border-2 border-purple-400 shadow-[0_0_15px_rgba(168,85,247,0.4)] flex items-center justify-center transition-all transform active:scale-95" id="btnMobileFireP2">
+                        <i class="fa-solid fa-crosshairs text-xl text-white"></i>
+                    </div>
+                    <div class="text-[9px] text-purple-400 text-center font-bold mt-1">BẮN P2</div>
                 </div>
-                <span class="text-[10px] font-bold text-pink-400 tracking-wider">FIRE</span>
+                <!-- Joystick P2 (Chỉ hiển thị khi chơi 2 người) -->
+                <div id="joystickZone2" class="w-28 h-28 rounded-full border-2 border-purple-500/30 bg-purple-950/10 flex items-center justify-center pointer-events-auto relative active:border-purple-400 hidden">
+                    <div class="w-10 h-10 rounded-full bg-purple-500/40 border border-purple-300 shadow-[0_0_12px_rgba(168,85,247,0.5)] absolute" id="joystickKnob2" style="left: calc(50% - 20px); top: calc(50% - 20px);"></div>
+                </div>
+
+                <!-- Nút bắn P1 ở chế độ Single Player (Chỉ hiển thị khi chơi 1 người) -->
+                <div id="btnMobileFireSingleContainer" class="flex flex-col items-center pointer-events-auto">
+                    <div class="w-20 h-20 rounded-full bg-pink-600/50 active:bg-pink-400/80 border-2 border-pink-400 shadow-[0_0_20px_rgba(255,0,127,0.4)] flex items-center justify-center transition-all transform active:scale-95" id="btnMobileFireSingle">
+                        <i class="fa-solid fa-crosshairs text-2xl text-white"></i>
+                    </div>
+                    <span class="text-[10px] font-bold text-pink-400 tracking-wider mt-1">BẮN</span>
+                </div>
             </div>
         </div>
 
@@ -615,11 +664,20 @@
         let isUsingMouse = false;
         let isShooting = false;
 
-        // Joystick Vectors
+        // Joystick P1 Vectors
         let joystickActive = false;
         let joystickStart = { x: 0, y: 0 };
         let joystickVector = { x: 0, y: 0 };
         const maxJoystickDist = 45;
+
+        // Joystick P2 Vectors
+        let joystickActive2 = false;
+        let joystickStart2 = { x: 0, y: 0 };
+        let joystickVector2 = { x: 0, y: 0 };
+
+        // Mobile Fire State
+        let isShootingP1 = false;
+        let isShootingP2 = false;
 
         // Tracking game components
         let player;
@@ -675,7 +733,7 @@
         canvas.addEventListener('mousedown', () => { isShooting = true; sounds.init(); });
         canvas.addEventListener('mouseup', () => isShooting = false);
 
-        // Mobile Touch Listeners for Joystick
+        // Mobile Touch Listeners for Joystick P1
         const joystickZone = document.getElementById('joystickZone');
         const joystickKnob = document.getElementById('joystickKnob');
 
@@ -692,7 +750,15 @@
 
         joystickZone.addEventListener('touchmove', (e) => {
             if (!joystickActive) return;
-            const touch = e.touches[0];
+            let touch = null;
+            for (let i = 0; i < e.touches.length; i++) {
+                const t = e.touches[i];
+                if (t.target === joystickZone || joystickZone.contains(t.target)) {
+                    touch = t;
+                    break;
+                }
+            }
+            if (!touch) touch = e.touches[0];
             
             let dx = touch.clientX - joystickStart.x;
             let dy = touch.clientY - joystickStart.y;
@@ -705,7 +771,6 @@
 
             joystickKnob.style.transform = `translate(${dx}px, ${dy}px)`;
             
-            // Normalize vector between -1 and 1
             joystickVector = {
                 x: dx / maxJoystickDist,
                 y: dy / maxJoystickDist
@@ -722,15 +787,88 @@
         joystickZone.addEventListener('touchend', resetJoystick);
         joystickZone.addEventListener('touchcancel', resetJoystick);
 
-        // Mobile Fire Button
-        const btnMobileFire = document.getElementById('btnMobileFire');
-        btnMobileFire.addEventListener('touchstart', (e) => {
-            e.preventDefault();
-            isShooting = true;
+        // Mobile Touch Listeners for Joystick P2
+        const joystickZone2 = document.getElementById('joystickZone2');
+        const joystickKnob2 = document.getElementById('joystickKnob2');
+
+        joystickZone2.addEventListener('touchstart', (e) => {
+            sounds.init();
+            joystickActive2 = true;
+            const touch = e.touches[0];
+            const rect = joystickZone2.getBoundingClientRect();
+            joystickStart2 = {
+                x: rect.left + rect.width / 2,
+                y: rect.top + rect.height / 2
+            };
         });
-        btnMobileFire.addEventListener('touchend', (e) => {
+
+        joystickZone2.addEventListener('touchmove', (e) => {
+            if (!joystickActive2) return;
+            let touch = null;
+            for (let i = 0; i < e.touches.length; i++) {
+                const t = e.touches[i];
+                if (t.target === joystickZone2 || joystickZone2.contains(t.target)) {
+                    touch = t;
+                    break;
+                }
+            }
+            if (!touch) touch = e.touches[0];
+            
+            let dx = touch.clientX - joystickStart2.x;
+            let dy = touch.clientY - joystickStart2.y;
+            const dist = Math.sqrt(dx*dx + dy*dy);
+            
+            if (dist > maxJoystickDist) {
+                dx = (dx / dist) * maxJoystickDist;
+                dy = (dy / dist) * maxJoystickDist;
+            }
+
+            joystickKnob2.style.transform = `translate(${dx}px, ${dy}px)`;
+            
+            joystickVector2 = {
+                x: dx / maxJoystickDist,
+                y: dy / maxJoystickDist
+            };
+        });
+
+        const resetJoystick2 = () => {
+            joystickActive2 = false;
+            joystickKnob2.style.transform = 'translate(0px, 0px)';
+            joystickVector2 = { x: 0, y: 0 };
+        };
+
+        joystickZone2.addEventListener('touchend', resetJoystick2);
+        joystickZone2.addEventListener('touchcancel', resetJoystick2);
+
+        // Mobile Fire Buttons Events
+        const btnMobileFireSingle = document.getElementById('btnMobileFireSingle');
+        btnMobileFireSingle.addEventListener('touchstart', (e) => {
             e.preventDefault();
-            isShooting = false;
+            isShootingP1 = true;
+        });
+        btnMobileFireSingle.addEventListener('touchend', (e) => {
+            e.preventDefault();
+            isShootingP1 = false;
+        });
+
+        const btnMobileFireP1 = document.getElementById('btnMobileFireP1');
+        btnMobileFireP1.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            isShootingP1 = true;
+        });
+        btnMobileFireP1.addEventListener('touchend', (e) => {
+            e.preventDefault();
+            isShootingP1 = false;
+        });
+
+        const btnMobileFireP2 = document.getElementById('btnMobileFireP2');
+        btnMobileFireP2.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            isShootingP2 = true;
+        });
+        btnMobileFireP2.addEventListener('touchend', (e) => {
+            e.preventDefault();
+            isShootingP2 = false;
         });
     </script>
 
@@ -797,14 +935,14 @@
                 // Movement: check Keyboard
                 let dx = 0;
                 let dy = 0;
-                let shootKey = false;
+                let shoot = false;
 
                 if (this.playerIndex === 1) {
                     if (keys['w']) dy = -1;
                     if (keys['s']) dy = 1;
                     if (keys['a']) dx = -1;
                     if (keys['d']) dx = 1;
-                    if (keys[' ']) shootKey = true;
+                    shoot = keys[' '] || (isUsingMouse && isShooting && !isTwoPlayers) || isShootingP1;
 
                     // Movement: check Mouse (smooth interpolation) - P1 only, in single-player
                     const isKeyboardMoving = keys['w'] || keys['s'] || keys['a'] || keys['d'];
@@ -815,11 +953,11 @@
                         this.y += (targetY - this.y) * 0.15;
                     }
                 } else {
-                    if (keys['arrowup']) dy = -1;
-                    if (keys['arrowdown']) dy = 1;
-                    if (keys['arrowleft']) dx = -1;
-                    if (keys['arrowright']) dx = 1;
-                    if (keys['enter'] || keys['control']) shootKey = true;
+                    if (keys['arrowup'] || keys['up']) dy = -1;
+                    if (keys['arrowdown'] || keys['down']) dy = 1;
+                    if (keys['arrowleft'] || keys['left']) dx = -1;
+                    if (keys['arrowright'] || keys['right']) dx = 1;
+                    shoot = keys['enter'] || keys['control'] || isShootingP2;
                 }
 
                 // Normalize movement vector
@@ -832,10 +970,16 @@
                 this.x += dx * this.speed;
                 this.y += dy * this.speed;
 
-                // Movement: check Mobile Joystick (P1 only)
+                // Movement: check Mobile Joystick (P1)
                 if (this.playerIndex === 1 && joystickActive) {
                     this.x += joystickVector.x * this.speed;
                     this.y += joystickVector.y * this.speed;
+                }
+
+                // Movement: check Mobile Joystick (P2)
+                if (this.playerIndex === 2 && joystickActive2) {
+                    this.x += joystickVector2.x * this.speed;
+                    this.y += joystickVector2.y * this.speed;
                 }
 
                 // Clamping to screen borders
@@ -856,7 +1000,7 @@
                 this.shieldRegenRate = playerUpgrades.shield * 0.05;
 
                 // Handle shooting cycle
-                if (shootKey || (this.playerIndex === 1 && isShooting && !isTwoPlayers)) {
+                if (shoot) {
                     this.fire();
                 }
 
@@ -1870,11 +2014,37 @@
             menuScreen.classList.add('hidden');
             topHUD.classList.remove('opacity-0');
             
+            // Cố gắng khóa hướng màn hình nằm ngang khi bắt đầu game di động
+            if (screen.orientation && screen.orientation.lock) {
+                screen.orientation.lock('landscape').catch(err => {
+                    console.log("Không khóa được hướng ngang: ", err);
+                });
+            }
+
             const isTouchDevice = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
             if (isTouchDevice) {
                 mobileControls.classList.remove('hidden');
                 mobileControls.classList.add('flex');
                 setTimeout(() => mobileControls.classList.remove('opacity-0'), 50);
+
+                if (isTwoPlayers) {
+                    // Hiển thị nút Co-op di động (hai bên màn hình)
+                    document.getElementById('btnMobileFireP1Container').classList.remove('hidden');
+                    document.getElementById('btnMobileFireP2Container').classList.remove('hidden');
+                    document.getElementById('joystickZone2').classList.remove('hidden');
+                    // Ẩn nút Single di động
+                    document.getElementById('btnMobileFireSingleContainer').classList.add('hidden');
+                } else {
+                    // Ẩn nút Co-op di động
+                    document.getElementById('btnMobileFireP1Container').classList.add('hidden');
+                    document.getElementById('btnMobileFireP2Container').classList.add('hidden');
+                    document.getElementById('joystickZone2').classList.add('hidden');
+                    // Hiển thị nút Single di động
+                    document.getElementById('btnMobileFireSingleContainer').classList.remove('hidden');
+                }
+            } else {
+                mobileControls.classList.add('hidden');
+                mobileControls.classList.remove('flex');
             }
 
             startNewWave();
