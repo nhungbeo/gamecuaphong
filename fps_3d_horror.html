@@ -1,0 +1,672 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FPS Horror 3D - Final Fix</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.min.js"></script>
+    <style>
+        body { margin: 0; overflow: hidden; background: #333; }
+        #crosshair { position: absolute; top: 50%; left: 50%; width: 20px; height: 20px; border: 2px solid white; border-radius: 50%; transform: translate(-50%, -50%); pointer-events: none; z-index: 100; }
+        #ui-container { position: absolute; top: 20px; left: 20px; z-index: 10; pointer-events: none; }
+        #game-over-screen, #win-screen { display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); color: white; flex-direction: column; justify-content: center; align-items: center; z-index: 20; }
+        #click-to-start { position: absolute; top: 80%; left: 50%; transform: translate(-50%, -50%); color: white; background: rgba(0,0,0,0.5); padding: 10px 20px; border-radius: 8px; font-weight: bold; pointer-events: none; }
+        
+        /* CSS cho điều khiển di động */
+        .mobile-btn {
+            position: absolute;
+            width: 70px;
+            height: 70px;
+            border-radius: 50%;
+            color: white;
+            font-weight: 800;
+            border: 2px solid rgba(255, 255, 255, 0.4);
+            backdrop-filter: blur(4px);
+            z-index: 1000;
+            display: none;
+            justify-content: center;
+            align-items: center;
+            touch-action: manipulation;
+            user-select: none;
+        }
+        #mobile-btn-shoot {
+            bottom: 120px;
+            right: 40px;
+            background: rgba(220, 38, 38, 0.6);
+            border-color: rgba(220, 38, 38, 0.8);
+            font-size: 14px;
+        }
+        #mobile-btn-shoot:active {
+            background: rgba(220, 38, 38, 0.9);
+        }
+        #mobile-btn-jump {
+            bottom: 40px;
+            right: 130px;
+            background: rgba(71, 85, 105, 0.6);
+            font-size: 12px;
+        }
+        #mobile-btn-jump:active {
+            background: rgba(71, 85, 105, 0.9);
+        }
+        #mobile-btn-flash {
+            bottom: 40px;
+            right: 40px;
+            background: rgba(234, 179, 8, 0.4);
+            border-color: rgba(234, 179, 8, 0.6);
+            font-size: 12px;
+        }
+        #mobile-btn-flash:active {
+            background: rgba(234, 179, 8, 0.7);
+        }
+    </style>
+</head>
+<body>
+    <div id="crosshair"></div>
+    <div id="click-to-start">CLICK HOẶC CHẠM ĐỂ BẮT ĐẦU</div>
+    
+    <!-- Joystick ảo di động -->
+    <div id="mobile-joystick-container" style="position: absolute; bottom: 40px; left: 40px; width: 120px; height: 120px; background: rgba(255,255,255,0.08); border: 2px solid rgba(255,255,255,0.25); border-radius: 50%; z-index: 1000; touch-action: none; display: none; user-select: none;">
+        <div id="mobile-joystick-knob" style="position: absolute; top: 35px; left: 35px; width: 50px; height: 50px; background: rgba(239, 68, 68, 0.7); border: 2px solid rgba(239, 68, 68, 0.9); border-radius: 50%; transition: transform 0.05s ease;"></div>
+    </div>
+
+    <!-- Nút hành động di động -->
+    <button id="mobile-btn-shoot" class="mobile-btn">BẮN</button>
+    <button id="mobile-btn-jump" class="mobile-btn">NHẢY</button>
+    <button id="mobile-btn-flash" class="mobile-btn">ĐÈN</button>
+    
+    <div id="start-menu" class="fixed inset-0 bg-slate-950/95 backdrop-blur-md flex flex-col items-center justify-center text-white z-[3000] transition-opacity duration-300">
+        <div class="bg-slate-900/95 p-8 rounded-3xl border border-red-500/30 shadow-2xl text-center max-w-lg w-full mx-4">
+            <span class="text-7xl animate-pulse inline-block mb-2">💀🚪🩸</span>
+            <h1 class="text-4xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-red-600 via-orange-500 to-amber-500 tracking-wider uppercase drop-shadow-lg">SURVIVAL HORROR 3D</h1>
+            <p class="text-slate-300 mt-4 mb-6 text-sm leading-relaxed">
+                Bạn bị kẹt trong một mê cung tăm tối với những sinh vật khát máu. Hãy bật đèn pin để xua đuổi chúng hoặc bắn hạ chúng trước khi hết đạn!
+            </p>
+
+            <button onclick="startPlay()" class="w-full py-4 bg-gradient-to-r from-red-700 via-orange-600 to-red-600 hover:from-red-600 hover:to-orange-500 text-white font-black rounded-xl shadow-lg hover:shadow-orange-500/30 active:scale-95 transition-all duration-150 cursor-pointer text-base tracking-wider uppercase">
+                BẮT ĐẦU SINH TỒN
+            </button>
+        </div>
+    </div>
+
+    <div id="ui-container" class="text-white bg-black/60 p-4 rounded-lg border border-gray-500">
+        <h1 class="text-xl font-bold text-red-500">SURVIVAL HORROR</h1>
+        <div id="p1-hud">
+            <p class="text-xs text-cyan-400 font-bold">Điều khiển: W,A,S,D + Chuột + Click (F: Đèn pin)</p>
+            <div class="mt-1 flex items-center gap-2">
+                <span>Máu:</span>
+                <div class="w-32 h-3 bg-gray-700 rounded-full overflow-hidden">
+                    <div id="health-bar" class="h-full bg-red-600 transition-all duration-300" style="width: 100%;"></div>
+                </div>
+            </div>
+            <div class="text-xs font-mono mt-1">
+                Đạn: <span id="ammo-count">5</span>/5 | Tổng: <span id="total-ammo">25</span>
+                <span id="reload-text" class="text-red-400 ml-2 hidden animate-pulse">Reload...</span>
+            </div>
+            <div class="text-[10px] font-mono mt-0.5">
+                Đèn: <span id="flashlight-status" class="text-green-400">BẬT</span>
+            </div>
+        </div>
+
+        <p class="mt-2 text-yellow-400 font-bold">Tiêu diệt: <span id="kill-count">0</span>/<span id="target-kills">15</span></p>
+    </div>
+
+    <div id="game-over-screen">
+        <h1 class="text-6xl font-bold text-red-600">GAME OVER</h1>
+        <button onclick="location.reload()" class="mt-8 px-6 py-3 bg-red-800 text-white rounded-lg hover:bg-red-600">Chơi lại</button>
+    </div>
+
+    <div id="win-screen">
+        <h1 class="text-6xl font-bold text-green-500">CHIẾN THẮNG!</h1>
+        <button onclick="location.reload()" class="mt-8 px-6 py-3 bg-green-700 text-white rounded-lg hover:bg-green-500">Chơi lại</button>
+    </div>
+
+    <script>
+        let scene, camera, renderer, bullets = [], monsters = [], flashlight;
+        let killCount = 0, health = 100, ammo = 5, totalAmmo = 25;
+        let lastDamageTime = 0, isReloading = false, velocityY = 0;
+        const moveState = { w: false, a: false, s: false, d: false };
+        let gameStarted = false;
+
+        // Quản lý pin đèn pin
+        let flashlightOnDuration = 0; // ms
+        let flashlightCooldownTime = 0; // ms
+        let lastFlashlightCheckTime = Date.now();
+
+        // Tải vị trí nhà để tính va chạm
+        const housePositions = [];
+
+        // Tái sử dụng hình học và vật liệu để tối ưu hóa bộ nhớ và tăng FPS
+        const bulletGeom = new THREE.CylinderGeometry(0.05, 0.05, 0.5, 8);
+        const bulletMat = new THREE.MeshBasicMaterial({ color: 0xff4500 });
+        
+        const monsterBodyGeom = new THREE.CylinderGeometry(0.3, 0.4, 0.8, 8);
+        const monsterHeadGeom = new THREE.SphereGeometry(0.3, 8, 8);
+        const monsterEyeGeom = new THREE.SphereGeometry(0.08, 4, 4);
+        const monsterMat = new THREE.MeshPhongMaterial({ color: 0x220000 });
+        const monsterEyeMat = new THREE.MeshBasicMaterial({ color: 0xff0000 });
+
+        const houseWallGeom = new THREE.BoxGeometry(4, 4, 4);
+        const houseRoofGeom = new THREE.ConeGeometry(3, 2, 4);
+        const houseWallMat = new THREE.MeshPhongMaterial({ color: 0x444444 });
+        const houseRoofMat = new THREE.MeshPhongMaterial({ color: 0x333333 });
+
+        async function startPlay() {
+            await Tone.start();
+            document.getElementById('start-menu').style.display = 'none';
+            gameStarted = true;
+            init();
+        }
+
+        function toggleFlashlight() {
+            if (flashlightCooldownTime > 0) return;
+            flashlight.visible = !flashlight.visible;
+            if (flashlight.visible) {
+                flashlightOnDuration = 0;
+            }
+        }
+
+        const gunSynth = new Tone.Synth({ oscillator: { type: 'square' }, envelope: { attack: 0.001, decay: 0.1, sustain: 0, release: 0.1 } }).toDestination();
+
+        function init() {
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x333333);
+            scene.fog = new THREE.Fog(0x333333, 5, 70);
+
+            const aspect = window.innerWidth / window.innerHeight;
+            camera = new THREE.PerspectiveCamera(75, aspect, 0.1, 1000);
+            camera.position.set(-2, 1.6, 0); 
+            
+            flashlight = new THREE.SpotLight(0xffffff, 2);
+            flashlight.angle = Math.PI / 4; 
+            flashlight.penumbra = 0.5;
+            camera.add(flashlight);
+            camera.add(flashlight.target);
+            flashlight.target.position.set(0, 0, -1);
+            scene.add(camera);
+
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            document.body.appendChild(renderer.domElement);
+
+            scene.add(new THREE.AmbientLight(0xffffff, 0.3));
+            const floor = new THREE.Mesh(new THREE.PlaneGeometry(200, 200), new THREE.MeshPhongMaterial({ color: 0x228B22 }));
+            floor.rotation.x = -Math.PI / 2;
+            floor.position.y = -1;
+            scene.add(floor);
+
+            for(let i = 0; i < 20; i++) createHouse((Math.random()-0.5)*100, (Math.random()-0.5)*100);
+
+            // Lắng nghe sự kiện đổi kích thước cửa sổ để sửa lỗi hiển thị
+            window.addEventListener('resize', onWindowResize);
+
+            animate();
+        }
+
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+        function createHouse(x, z) {
+            const house = new THREE.Group();
+            const wall = new THREE.Mesh(houseWallGeom, houseWallMat);
+            wall.position.y = 2;
+            const roof = new THREE.Mesh(houseRoofGeom, houseRoofMat);
+            roof.position.y = 5;
+            roof.rotation.y = Math.PI / 4;
+            house.add(wall, roof);
+            house.position.set(x, 0, z);
+            scene.add(house);
+            
+            // Lưu lại vị trí và bán kính va chạm của ngôi nhà
+            housePositions.push({ x, z, radius: 2.2 });
+        }
+
+        const resetMovement = () => {
+            Object.keys(moveState).forEach(k => moveState[k] = false);
+        };
+        window.addEventListener('keydown', (e) => { 
+            if(e.key.toLowerCase() in moveState) moveState[e.key.toLowerCase()] = true; 
+            if(e.key.toLowerCase() === 'f') toggleFlashlight();
+            if(e.key === ' ' && camera.position.y <= 1.6) velocityY = 0.2;
+        });
+        window.addEventListener('keyup', (e) => { 
+            if(e.key.toLowerCase() in moveState) moveState[e.key.toLowerCase()] = false; 
+        });
+        window.addEventListener('blur', resetMovement);
+        
+        document.addEventListener('pointerlockchange', () => { 
+            if (!document.pointerLockElement) {
+                resetMovement(); 
+                if (gameStarted && !isTouchDevice && health > 0 && killCount < 15) {
+                    const startLabel = document.getElementById('click-to-start');
+                    startLabel.innerText = "CLICK ĐỂ TIẾP TỤC SINH TỒN";
+                    startLabel.style.display = 'block';
+                }
+            } 
+        });
+
+        function shootGun() {
+            if (!isReloading && ammo > 0) {
+                gunSynth.triggerAttackRelease("C2", "8n");
+                const bullet = new THREE.Mesh(bulletGeom, bulletMat);
+                bullet.rotation.x = Math.PI / 2;
+                bullet.position.copy(camera.position);
+                bullet.velocity = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion).multiplyScalar(0.8);
+                scene.add(bullet);
+                bullets.push(bullet);
+                ammo--; totalAmmo--;
+                document.getElementById('ammo-count').innerText = ammo;
+                document.getElementById('total-ammo').innerText = totalAmmo;
+                if (ammo <= 0 && totalAmmo > 0) reload();
+            } else if (ammo === 0 && totalAmmo > 0 && !isReloading) {
+                reload();
+            }
+        }
+
+        document.body.addEventListener('mousedown', async (e) => {
+            if (e.target.id === 'global-exit-btn' || e.target.closest('#global-exit-btn')) {
+                return;
+            }
+            if (!isTouchDevice) {
+                if (!document.pointerLockElement) {
+                    await Tone.start();
+                    document.body.requestPointerLock();
+                    document.getElementById('click-to-start').style.display = 'none';
+                    gameStarted = true;
+                } else {
+                    shootGun();
+                }
+            }
+        });
+
+        window.addEventListener('mousemove', (e) => {
+            if (document.pointerLockElement === document.body) {
+                camera.rotation.y -= e.movementX * 0.002;
+                camera.rotation.x -= e.movementY * 0.002;
+                camera.rotation.x = Math.max(-Math.PI/3, Math.min(Math.PI/3, camera.rotation.x));
+            }
+        });
+
+        // --- HỖ TRỢ ĐIỀU KHIỂN CẢM ỨNG DI ĐỘNG ---
+        const isTouchDevice = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
+        let joystickVector = { x: 0, y: 0 };
+        let joystickActive = false;
+        let joystickStart = { x: 0, y: 0 };
+
+        if (isTouchDevice) {
+            document.getElementById('mobile-joystick-container').style.display = 'block';
+            document.getElementById('mobile-btn-shoot').style.display = 'flex';
+            document.getElementById('mobile-btn-jump').style.display = 'flex';
+            document.getElementById('mobile-btn-flash').style.display = 'flex';
+
+            const joyContainer = document.getElementById('mobile-joystick-container');
+            const joyKnob = document.getElementById('mobile-joystick-knob');
+
+            joyContainer.addEventListener('touchstart', (e) => {
+                e.stopPropagation();
+                joystickActive = true;
+                const rect = joyContainer.getBoundingClientRect();
+                joystickStart = {
+                    x: rect.left + rect.width / 2,
+                    y: rect.top + rect.height / 2
+                };
+            }, { passive: true });
+
+            joyContainer.addEventListener('touchmove', (e) => {
+                e.stopPropagation();
+                if (!joystickActive) return;
+                const touch = e.touches[0];
+                let dx = touch.clientX - joystickStart.x;
+                let dy = touch.clientY - joystickStart.y;
+                const dist = Math.sqrt(dx*dx + dy*dy);
+                const maxDist = 35;
+
+                if (dist > maxDist) {
+                    dx = (dx / dist) * maxDist;
+                    dy = (dy / dist) * maxDist;
+                }
+
+                joyKnob.style.transform = `translate(${dx}px, ${dy}px)`;
+                joystickVector = {
+                    x: dx / maxDist,
+                    y: dy / maxDist
+                };
+            }, { passive: true });
+
+            const stopJoy = (e) => {
+                if (e) e.stopPropagation();
+                joystickActive = false;
+                joyKnob.style.transform = 'translate(0px, 0px)';
+                joystickVector = { x: 0, y: 0 };
+            };
+
+            joyContainer.addEventListener('touchend', stopJoy, { passive: true });
+            joyContainer.addEventListener('touchcancel', stopJoy, { passive: true });
+
+            // Nút bấm di động
+            document.getElementById('mobile-btn-shoot').addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                shootGun();
+            });
+
+            document.getElementById('mobile-btn-jump').addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                if (camera.position.y <= 1.6) velocityY = 0.2;
+            });
+
+            document.getElementById('mobile-btn-flash').addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                toggleFlashlight();
+            });
+        }
+
+        // Vuốt góc phải màn hình để quay camera
+        let lookTouchId = null;
+        let lastLookX = 0;
+        let lastLookY = 0;
+
+        window.addEventListener('touchstart', async (e) => {
+            if (isTouchDevice && !gameStarted) {
+                await Tone.start();
+                document.getElementById('click-to-start').style.display = 'none';
+                gameStarted = true;
+            }
+
+            for (let i = 0; i < e.changedTouches.length; i++) {
+                const touch = e.changedTouches[i];
+                if (touch.clientX > window.innerWidth / 2 && lookTouchId === null) {
+                    lookTouchId = touch.identifier;
+                    lastLookX = touch.clientX;
+                    lastLookY = touch.clientY;
+                }
+            }
+        }, { passive: true });
+
+        window.addEventListener('touchmove', (e) => {
+            for (let i = 0; i < e.touches.length; i++) {
+                const touch = e.touches[i];
+                if (touch.identifier === lookTouchId) {
+                    const dx = touch.clientX - lastLookX;
+                    const dy = touch.clientY - lastLookY;
+
+                    camera.rotation.y -= dx * 0.006;
+                    camera.rotation.x -= dy * 0.006;
+                    camera.rotation.x = Math.max(-Math.PI/3, Math.min(Math.PI/3, camera.rotation.x));
+
+                    lastLookX = touch.clientX;
+                    lastLookY = touch.clientY;
+                }
+            }
+        }, { passive: true });
+
+        window.addEventListener('touchend', (e) => {
+            for (let i = 0; i < e.changedTouches.length; i++) {
+                const touch = e.changedTouches[i];
+                if (touch.identifier === lookTouchId) {
+                    lookTouchId = null;
+                }
+            }
+        }, { passive: true });
+
+        function reload() {
+            isReloading = true;
+            document.getElementById('reload-text').classList.remove('hidden');
+            setTimeout(() => { 
+                ammo = Math.min(5, totalAmmo); 
+                isReloading = false; 
+                document.getElementById('ammo-count').innerText = ammo; 
+                document.getElementById('total-ammo').innerText = totalAmmo;
+                document.getElementById('reload-text').classList.add('hidden'); 
+            }, 2000);
+        }
+
+        function createMonster() {
+            const monsterGroup = new THREE.Group();
+            const body = new THREE.Mesh(monsterBodyGeom, monsterMat);
+            const head = new THREE.Mesh(monsterHeadGeom, monsterMat);
+            head.position.y = 0.6;
+            const eye1 = new THREE.Mesh(monsterEyeGeom, monsterEyeMat);
+            eye1.position.set(0.12, 0.7, 0.2);
+            const eye2 = new THREE.Mesh(monsterEyeGeom, monsterEyeMat);
+            eye2.position.set(-0.12, 0.7, 0.2);
+            monsterGroup.add(body, head, eye1, eye2);
+            
+            const angle = Math.random() * Math.PI * 2;
+            const dist = 30 + Math.random() * 10;
+            monsterGroup.position.set(Math.cos(angle) * dist, 0.1, Math.sin(angle) * dist);
+            scene.add(monsterGroup);
+            monsters.push(monsterGroup);
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+            if(health <= 0 || killCount >= 15) return;
+
+            // Cập nhật logic đèn pin
+            const now = Date.now();
+            const dt = now - lastFlashlightCheckTime;
+            lastFlashlightCheckTime = now;
+
+            if (flashlightCooldownTime > 0) {
+                flashlightCooldownTime -= dt;
+                if (flashlightCooldownTime <= 0) {
+                    flashlightCooldownTime = 0;
+                }
+            }
+
+            if (flashlight.visible) {
+                flashlightOnDuration += dt;
+                if (flashlightOnDuration >= 60000) { 
+                    flashlight.visible = false;
+                    flashlightOnDuration = 0;
+                    flashlightCooldownTime = 10000; 
+                }
+            }
+
+            // Đồng bộ UI đèn pin
+            const statusEl = document.getElementById('flashlight-status');
+            if (flashlightCooldownTime > 0) {
+                statusEl.innerText = `QUÁ TẢI (${Math.ceil(flashlightCooldownTime / 1000)}s)`;
+                statusEl.className = "text-red-500 font-bold animate-pulse";
+            } else if (flashlight.visible) {
+                statusEl.innerText = `ĐANG BẬT (${Math.ceil((60000 - flashlightOnDuration) / 1000)}s)`;
+                statusEl.className = "text-yellow-400 font-bold";
+            } else {
+                statusEl.innerText = "TẮT (SẴN SÀNG)";
+                statusEl.className = "text-green-400";
+            }
+
+            if(Math.random() < 0.015 && monsters.length < 6) createMonster();
+
+            // Di chuyển của Player
+            if (document.pointerLockElement === document.body || isTouchDevice) {
+                const yaw = camera.rotation.y;
+                const f = new THREE.Vector3(0, 0, -1).applyEuler(new THREE.Euler(0, yaw, 0));
+                const r = new THREE.Vector3(1, 0, 0).applyEuler(new THREE.Euler(0, yaw, 0));
+                const speed = 0.15;
+                const nextPos = camera.position.clone();
+                if (moveState.w) nextPos.add(f.multiplyScalar(speed));
+                if (moveState.s) nextPos.add(f.multiplyScalar(-speed));
+                if (moveState.a) nextPos.add(r.multiplyScalar(-speed));
+                if (moveState.d) nextPos.add(r.multiplyScalar(speed));
+                
+                // Hỗ trợ Joystick di động
+                if (isTouchDevice && (joystickVector.x !== 0 || joystickVector.y !== 0)) {
+                    nextPos.add(f.multiplyScalar(-joystickVector.y * speed));
+                    nextPos.add(r.multiplyScalar(joystickVector.x * speed));
+                }
+                
+                // Kiểm tra va chạm với các ngôi nhà (bán kính người chơi ~0.5)
+                let collision = false;
+                for (const house of housePositions) {
+                    const dx = nextPos.x - house.x;
+                    const dz = nextPos.z - house.z;
+                    const dist = Math.hypot(dx, dz);
+                    if (dist < (house.radius + 0.5)) {
+                        collision = true;
+                        break;
+                    }
+                }
+                if (!collision) {
+                    camera.position.copy(nextPos);
+                }
+                
+                velocityY -= 0.01;
+                camera.position.y += velocityY;
+                if(camera.position.y <= 1.6) { camera.position.y = 1.6; velocityY = 0; }
+            }
+
+            // Xử lý quái vật đuổi theo người chơi duy nhất
+            monsters.forEach((m, mi) => {
+                const toPlayer = new THREE.Vector3(camera.position.x - m.position.x, 0, camera.position.z - m.position.z).normalize();
+                const toMonster = new THREE.Vector3(m.position.x - camera.position.x, 0, m.position.z - camera.position.z).normalize();
+                
+                const camDir = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion).normalize();
+                camDir.y = 0;
+                camDir.normalize();
+
+                const angle = camDir.angleTo(toMonster);
+                const isLitByFlashlight = flashlight.visible && angle < flashlight.angle;
+                
+                let step = toPlayer.multiplyScalar(0.06);
+                if (isLitByFlashlight) {
+                    step = toMonster.multiplyScalar(0.08);
+                }
+                
+                const nextMonsterPos = m.position.clone().add(step);
+                let monsterCollision = false;
+                for (const house of housePositions) {
+                    const dx = nextMonsterPos.x - house.x;
+                    const dz = nextMonsterPos.z - house.z;
+                    if (Math.hypot(dx, dz) < (house.radius + 0.4)) {
+                        monsterCollision = true;
+                        break;
+                    }
+                }
+                if (!monsterCollision) {
+                    m.position.copy(nextMonsterPos);
+                }
+                
+                m.position.y = 0.1; 
+                m.lookAt(camera.position);
+
+                const distXZ = Math.hypot(camera.position.x - m.position.x, camera.position.z - m.position.z);
+                if(distXZ < 1.5) {
+                    if (Date.now() - lastDamageTime > 1000) {
+                        health -= 10;
+                        document.getElementById('health-bar').style.width = health + '%';
+                        lastDamageTime = Date.now();
+                        if(health <= 0) {
+                            document.getElementById('game-over-screen').style.display = 'flex';
+                        }
+                    }
+                }
+            });
+
+            // Cập nhật và kiểm tra va chạm của đạn
+            for (let i = bullets.length - 1; i >= 0; i--) {
+                const b = bullets[i];
+                b.position.add(b.velocity);
+                
+                if (b.position.distanceTo(camera.position) > 100) {
+                    scene.remove(b);
+                    bullets.splice(i, 1);
+                    continue;
+                }
+                
+                let bulletRemoved = false;
+                for (let mi = monsters.length - 1; mi >= 0; mi--) {
+                    const m = monsters[mi];
+                    if (b.position.distanceTo(m.position) < 1.2) {
+                        scene.remove(m);
+                        monsters.splice(mi, 1);
+                        
+                        scene.remove(b);
+                        bullets.splice(i, 1);
+                        
+                        killCount++;
+                        document.getElementById('kill-count').innerText = killCount;
+                        if(killCount >= 15) {
+                            document.getElementById('win-screen').style.display = 'flex';
+                        }
+                        
+                        bulletRemoved = true;
+                        break;
+                    }
+                }
+                if (bulletRemoved) continue;
+            }
+
+            renderer.clear();
+            renderer.render(scene, camera);
+        }
+    </script>
+    <a href="index.html" id="global-exit-btn" style="
+        position: fixed;
+        top: 15px;
+        left: 15px;
+        z-index: 99999;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 10px 20px;
+        background: rgba(15, 23, 42, 0.6);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        border: 1px solid rgba(255, 255, 255, 0.15);
+        border-radius: 12px;
+        color: #f3f4f6;
+        text-decoration: none;
+        font-family: 'Outfit', 'Segoe UI', sans-serif;
+        font-size: 14px;
+        font-weight: 600;
+        letter-spacing: 0.5px;
+        box-shadow: 0 4px 30px rgba(0, 0, 0, 0.3);
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        cursor: pointer;
+    ">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="transition: transform 0.3s ease;">
+            <path d="M19 12H5M12 19l-7-7 7-7"/>
+        </svg>
+        Thoát
+    </a>
+
+    <script>
+        document.getElementById('global-exit-btn').addEventListener('click', function(e) {
+            e.preventDefault();
+            if (document.exitPointerLock) {
+                document.exitPointerLock();
+            }
+            this.style.transform = 'scale(0.95)';
+            setTimeout(() => {
+                if (window.opener && window.history.length === 1) {
+                    window.close();
+                } else {
+                    window.location.href = 'index.html';
+                }
+            }, 150);
+        });
+
+        const exitBtn = document.getElementById('global-exit-btn');
+        exitBtn.addEventListener('mouseenter', function() {
+            this.style.background = 'rgba(99, 102, 241, 0.3)';
+            this.style.borderColor = 'rgba(99, 102, 241, 0.6)';
+            this.style.boxShadow = '0 0 15px rgba(99, 102, 241, 0.4)';
+            this.querySelector('svg').style.transform = 'translateX(-3px)';
+        });
+        exitBtn.addEventListener('mouseleave', function() {
+            this.style.background = 'rgba(15, 23, 42, 0.6)';
+            this.style.borderColor = 'rgba(255, 255, 255, 0.15)';
+            this.style.boxShadow = '0 4px 30px rgba(0, 0, 0, 0.3)';
+            this.querySelector('svg').style.transform = 'translateX(0)';
+        });
+    </script>
+</body>
+</html>

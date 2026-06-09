@@ -1,0 +1,1373 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nova Defender 3D - Space Shooter</title>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            user-select: none;
+        }
+        body, html {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background-color: #020205;
+            font-family: 'Orbitron', sans-serif;
+            color: #fff;
+        }
+        #game-container {
+            position: relative;
+            width: 100%;
+            height: 100%;
+        }
+        #three-canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+        }
+        #two-canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 2;
+            pointer-events: none;
+        }
+        #ui-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 3;
+            pointer-events: none;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 30px;
+        }
+        .hud-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            width: 100%;
+        }
+        .stats-panel {
+            background: rgba(5, 5, 15, 0.7);
+            border: 1px solid rgba(0, 240, 255, 0.2);
+            border-radius: 8px;
+            padding: 15px;
+            backdrop-filter: blur(5px);
+            box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+        }
+        .shield-bar-container {
+            width: 250px;
+            height: 16px;
+            background: rgba(0,0,0,0.5);
+            border: 2px solid #333;
+            transform: skewX(-15px);
+            overflow: hidden;
+            margin-top: 5px;
+        }
+        .shield-fill {
+            height: 100%;
+            width: 100%;
+            background: linear-gradient(90deg, #0055ff, #00f0ff);
+            box-shadow: 0 0 15px #00f0ff;
+            transition: width 0.1s ease-out;
+        }
+        .score-text {
+            font-size: 28px;
+            font-weight: 900;
+            color: #ff0055;
+            text-shadow: 0 0 15px rgba(255, 0, 85, 0.7);
+        }
+        .level-text {
+            font-size: 14px;
+            color: #00ff66;
+            text-shadow: 0 0 10px rgba(0, 255, 102, 0.5);
+            margin-top: 5px;
+            text-align: right;
+        }
+        .controls-panel {
+            background: rgba(5, 5, 15, 0.7);
+            border: 1px solid rgba(0, 240, 255, 0.2);
+            border-radius: 8px;
+            padding: 15px;
+            width: fit-content;
+            pointer-events: auto;
+            backdrop-filter: blur(5px);
+        }
+        .controls-panel h3 {
+            color: #00f0ff;
+            font-size: 12px;
+            margin-bottom: 6px;
+            letter-spacing: 1px;
+            border-bottom: 1px solid rgba(0,240,255,0.2);
+            padding-bottom: 4px;
+        }
+        .control-row {
+            font-size: 10px;
+            color: #aaa;
+            margin-bottom: 4px;
+        }
+        .key {
+            background: #222;
+            color: #fff;
+            padding: 1px 5px;
+            border-radius: 4px;
+            border: 1px solid #444;
+            font-weight: bold;
+        }
+        #game-message {
+            position: absolute;
+            top: 45%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 60px;
+            font-weight: 900;
+            text-transform: uppercase;
+            letter-spacing: 5px;
+            text-align: center;
+            opacity: 0;
+            transition: all 0.3s ease;
+            text-shadow: 0 0 25px rgba(0, 240, 255, 0.8);
+            z-index: 4;
+        }
+        #game-message.show {
+            opacity: 1;
+        }
+        #game-over-screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(5, 5, 15, 0.85);
+            backdrop-filter: blur(8px);
+            z-index: 10;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.5s ease;
+        }
+        #game-over-screen.show {
+            opacity: 1;
+            pointer-events: auto;
+        }
+        #game-over-screen h2 {
+            font-size: 60px;
+            font-weight: 900;
+            color: #ff0055;
+            text-shadow: 0 0 30px rgba(255, 0, 85, 0.6);
+            margin-bottom: 15px;
+        }
+        .btn-restart {
+            background: transparent;
+            border: 2px solid #00f0ff;
+            color: #00f0ff;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 18px;
+            font-weight: 900;
+            padding: 12px 30px;
+            cursor: pointer;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            border-radius: 4px;
+            transition: all 0.2s ease;
+            box-shadow: 0 0 15px rgba(0, 240, 255, 0.2);
+            margin-top: 20px;
+        }
+        .btn-restart:hover {
+            background: #00f0ff;
+            color: #000;
+            box-shadow: 0 0 30px rgba(0, 240, 255, 0.8);
+            transform: scale(1.05);
+        }
+    </style>
+</head>
+<body>
+    <div id="game-container">
+        <!-- Start Menu Overlay -->
+        <div id="start-menu" style="
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(2, 2, 5, 0.95);
+            z-index: 100;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            font-family: 'Orbitron', sans-serif;
+            backdrop-filter: blur(8px);
+        ">
+            <h1 style="font-size: 50px; font-weight: 900; color: #00f0ff; text-shadow: 0 0 25px rgba(0, 240, 255, 0.6); margin-bottom: 10px; letter-spacing: 3px; text-align: center;">NOVA DEFENDER 3D</h1>
+            <p style="color: #888; font-size: 16px; margin-bottom: 40px; text-transform: uppercase; letter-spacing: 2px;">Bảo Vệ Ngân Hà 3D</p>
+            <div style="display: flex; gap: 20px; flex-wrap: wrap; justify-content: center;">
+                <button class="btn-restart" id="btn-1p" style="margin-top: 0;">1 NGƯỜI CHƠI (SOLO)</button>
+                <button class="btn-restart" id="btn-2p" style="margin-top: 0; border-color: #ff00ff; color: #ff00ff; box-shadow: 0 0 15px rgba(255, 0, 255, 0.2);">2 NGƯỜI CHƠI (CO-OP)</button>
+            </div>
+        </div>
+
+        <canvas id="three-canvas"></canvas>
+        <div id="two-canvas"></div>
+
+        <div id="ui-overlay">
+            <div class="hud-header">
+                <!-- P1 Shield status -->
+                <div class="stats-panel" id="p1-panel">
+                    <div id="p1-title" style="font-size: 11px; color: #00f0ff; font-weight: 700; letter-spacing: 1px;">GIÁP PHI THUYỀN (SHIELD)</div>
+                    <div class="shield-bar-container">
+                        <div id="shield-fill" class="shield-fill"></div>
+                    </div>
+                </div>
+
+                <!-- P2 Shield status (Hidden initially) -->
+                <div class="stats-panel" id="p2-panel" style="display: none; border-color: rgba(255, 0, 255, 0.3);">
+                    <div style="font-size: 11px; color: #ff00ff; font-weight: 700; letter-spacing: 1px;">GIÁP P2 (PINK)</div>
+                    <div class="shield-bar-container" style="border-color: #551a55;">
+                        <div id="shield-fill-p2" class="shield-fill" style="background: linear-gradient(90deg, #aa00ff, #ff00ff); box-shadow: 0 0 15px #ff00ff;"></div>
+                    </div>
+                </div>
+
+                <!-- Score panel -->
+                <div class="stats-panel" style="text-align: right;">
+                    <div class="score-text" id="score-text">SCORE: 000000</div>
+                    <div class="level-text" id="level-text">WAVE 1</div>
+                </div>
+            </div>
+
+            <!-- Title Alert Messages -->
+            <div id="game-message">WAVE 1 START</div>
+
+            <!-- Controls Info -->
+            <div class="controls-panel" id="controls-panel">
+                <h3>BẢNG ĐIỀU KHIỂN</h3>
+                <div class="control-row" id="p1-controls-desc">Di chuyển phi thuyền: <span class="key">W</span> <span class="key">A</span> <span class="key">S</span> <span class="key">D</span> hoặc <span class="key">←</span> <span class="key">↑</span> <span class="key">→</span> <span class="key">↓</span></div>
+                <div class="control-row" id="p1-fire-desc" style="margin-top: 5px;">Bắn đạn Laser: <span class="key">Spacebar</span> hoặc Click chuột trái</div>
+                <div class="control-row" style="margin-top: 5px; color: #00ff66;">Mẹo: Đừng đâm vào thiên thạch!</div>
+            </div>
+        </div>
+
+        <div id="game-over-screen">
+            <h2>PHÂN RÃ PHI THUYỀN!</h2>
+            <div style="font-size: 20px; color: #aaa; margin-bottom: 10px;" id="final-score-text">ĐIỂM SỐ ĐẠT ĐƯỢC: 0</div>
+            <div style="display: flex; gap: 20px;">
+                <button class="btn-restart" onclick="restartGame()">CHƠI LẠI</button>
+                <button class="btn-restart" onclick="showMainMenu()" style="border-color: #aaa; color: #aaa; box-shadow: none;">MENU CHÍNH</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- CDN Libraries -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/two.js/0.8.10/two.min.js"></script>
+
+    <script>
+        // --- ÂM THANH GIẢ LẬP QUA WEB AUDIO API ---
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+        function playSynthLaser() {
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            
+            osc.type = 'sawtooth';
+            osc.frequency.setValueAtTime(800, audioCtx.currentTime);
+            osc.frequency.exponentialRampToValueAtTime(100, audioCtx.currentTime + 0.15);
+            
+            gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.15);
+            
+            osc.start();
+            osc.stop(audioCtx.currentTime + 0.15);
+        }
+
+        function playSynthExplosion() {
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+
+            osc.type = 'triangle';
+            osc.frequency.setValueAtTime(150, audioCtx.currentTime);
+            osc.frequency.linearRampToValueAtTime(20, audioCtx.currentTime + 0.4);
+
+            gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.4);
+
+            osc.start();
+            osc.stop(audioCtx.currentTime + 0.4);
+        }
+
+        // --- CẤU HÌNH GAME ---
+        const config = {
+            boundX: 11,
+            boundY: 6,
+            playerSpeed: 0.15,
+            laserSpeed: 0.5,
+            asteroidBaseSpeed: 0.1,
+            enemyBaseSpeed: 0.13,
+            maxShield: 100
+        };
+
+        // --- KHỞI TẠO THREE.JS (3D) ---
+        const canvas = document.getElementById('three-canvas');
+        const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x020205);
+        scene.fog = new THREE.FogExp2(0x020205, 0.015);
+
+        // Game Mode
+        let gameMode = '1P';
+
+        // Camera P1
+        const camera1 = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 100);
+        camera1.position.set(0, 1.8, 8);
+        camera1.lookAt(0, 0, -5);
+
+        // Camera P2
+        const camera2 = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 100);
+        camera2.position.set(0, 1.8, 8);
+        camera2.lookAt(0, 0, -5);
+
+        // Alias global camera to camera1 for backward compatibility/helper uses
+        let camera = camera1;
+
+        // Ánh sáng
+        const ambientLight = new THREE.AmbientLight(0x050510, 1.5);
+        scene.add(ambientLight);
+
+        const pointLight = new THREE.PointLight(0x00f0ff, 3, 20);
+        pointLight.position.set(0, 4, 2);
+        scene.add(pointLight);
+
+        const engineLight = new THREE.PointLight(0xff0055, 4, 10);
+        scene.add(engineLight);
+
+        const engineLight2 = new THREE.PointLight(0xff00ff, 4, 10);
+        // Added on demand in 2P mode
+
+        // --- DỰNG BẦU TRỜI SAO VÀ HẠT BỤI ---
+        const starsGeo = new THREE.BufferGeometry();
+        const starsCount = 800;
+        const posArray = new Float32Array(starsCount * 3);
+
+        for (let i = 0; i < starsCount * 3; i += 3) {
+            posArray[i] = (Math.random() - 0.5) * 80;
+            posArray[i+1] = (Math.random() - 0.5) * 60;
+            posArray[i+2] = -Math.random() * 90 - 10;
+        }
+
+        starsGeo.setAttribute('position', new THREE.BufferAttribute(posArray, 3));
+        const starsMat = new THREE.PointsMaterial({
+            size: 0.12,
+            color: 0xffffff,
+            transparent: true,
+            opacity: 0.8
+        });
+        const starfield = new THREE.Points(starsGeo, starsMat);
+        scene.add(starfield);
+
+        // --- DỰNG PHI THUYỀN NGƯỜI CHƠI (PLAYER SHIP) ---
+        function createPlayerShipMesh(colorHex = 0x00f0ff) {
+            const shipGroup = new THREE.Group();
+
+            const neonCyanMat = new THREE.MeshStandardMaterial({
+                color: colorHex,
+                emissive: colorHex,
+                emissiveIntensity: 0.4,
+                roughness: 0.2,
+                metalness: 0.8
+            });
+
+            const bodyMat = new THREE.MeshStandardMaterial({
+                color: 0x151520,
+                roughness: 0.3,
+                metalness: 0.7
+            });
+
+            // Thân chính hình thoi dài
+            const bodyGeo = new THREE.ConeGeometry(0.5, 2.2, 4);
+            const body = new THREE.Mesh(bodyGeo, bodyMat);
+            body.rotation.x = Math.PI / 2;
+            body.scale.set(1, 1, 0.4);
+            shipGroup.add(body);
+
+            // Cánh trái
+            const wingGeo = new THREE.BoxGeometry(1.2, 0.1, 0.8);
+            const leftWing = new THREE.Mesh(wingGeo, bodyMat);
+            leftWing.position.set(-0.8, -0.1, 0.3);
+            leftWing.rotation.y = 0.2;
+            shipGroup.add(leftWing);
+
+            // Bọc cánh Neon
+            const wingNeonLeft = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.15, 0.9), neonCyanMat);
+            wingNeonLeft.position.set(-1.4, -0.1, 0.3);
+            shipGroup.add(wingNeonLeft);
+
+            // Cánh phải
+            const rightWing = leftWing.clone();
+            rightWing.position.x = 0.8;
+            rightWing.rotation.y = -0.2;
+            shipGroup.add(rightWing);
+
+            const wingNeonRight = wingNeonLeft.clone();
+            wingNeonRight.position.x = 1.4;
+            shipGroup.add(wingNeonRight);
+
+            // Buồng lái kính phát sáng
+            const cockpitGeo = new THREE.SphereGeometry(0.25, 8, 8);
+            const cockpit = new THREE.Mesh(cockpitGeo, neonCyanMat);
+            cockpit.position.set(0, 0.15, -0.3);
+            cockpit.scale.set(1, 0.7, 2);
+            shipGroup.add(cockpit);
+
+            // Đuôi xả phản lực
+            const exhaustGeo = new THREE.CylinderGeometry(0.25, 0.1, 0.4, 8);
+            const exhaust = new THREE.Mesh(exhaustGeo, bodyMat);
+            exhaust.rotation.x = Math.PI / 2;
+            exhaust.position.set(0, 0, 1.2);
+            shipGroup.add(exhaust);
+
+            return shipGroup;
+        }
+
+        const playerShip = createPlayerShipMesh(0x00f0ff);
+        scene.add(playerShip);
+
+        const playerShip2 = createPlayerShipMesh(0xff00ff);
+        // Added on demand in 2P mode
+
+        // --- KHỞI TẠO TWO.JS (2D HUD) ---
+        const twoContainer = document.getElementById('two-canvas');
+        const two = new Two({ fullscreen: true, autostart: true }).appendTo(twoContainer);
+
+        // Radar quét mini
+        const radarCenter = { x: window.innerWidth - 100, y: window.innerHeight - 100 };
+        const radarBg = two.makeCircle(radarCenter.x, radarCenter.y, 60);
+        radarBg.fill = 'rgba(5, 5, 20, 0.7)';
+        radarBg.stroke = '#00f0ff';
+        radarBg.linewidth = 2;
+
+        const radarSweep = two.makeLine(radarCenter.x, radarCenter.y, radarCenter.x + 60, radarCenter.y);
+        radarSweep.stroke = 'rgba(0, 240, 255, 0.5)';
+        radarSweep.linewidth = 2.5;
+
+        // Điểm chấm radar của phi thuyền chính
+        const radarPlayerDot = two.makeCircle(radarCenter.x, radarCenter.y, 4);
+        radarPlayerDot.fill = '#00f0ff';
+        radarPlayerDot.stroke = '#fff';
+        radarPlayerDot.linewidth = 1;
+
+        // Điểm chấm radar của P2
+        const radarPlayer2Dot = two.makeCircle(radarCenter.x, radarCenter.y, 4);
+        radarPlayer2Dot.fill = '#ff00ff';
+        radarPlayer2Dot.stroke = '#fff';
+        radarPlayer2Dot.linewidth = 1;
+        radarPlayer2Dot.visible = false;
+
+        let radarDots = [];
+
+        // --- LOGIC TRÒ CHƠI ---
+        let score = 0;
+        let wave = 1;
+        let shield = config.maxShield;
+        let shield2 = config.maxShield;
+        let isGameOver = false;
+
+        let playerVel = { x: 0, y: 0 };
+        let playerVel2 = { x: 0, y: 0 };
+        let lasers = [];
+        let asteroids = [];
+        let enemies = [];
+        let particles = []; // Hạt nổ 3D
+
+        const keys = { 
+            w: false, a: false, s: false, d: false, // P1 keys
+            arrowup: false, arrowdown: false, arrowleft: false, arrowright: false // P2 keys
+        };
+
+        // Lắng nghe phím
+        window.addEventListener('keydown', (e) => {
+            if (isGameOver) return;
+            const key = e.key.toLowerCase();
+            
+            if (gameMode === '1P') {
+                if (key === 'w' || e.key === 'ArrowUp') keys.w = true;
+                if (key === 's' || e.key === 'ArrowDown') keys.s = true;
+                if (key === 'a' || e.key === 'ArrowLeft') keys.a = true;
+                if (key === 'd' || e.key === 'ArrowRight') keys.d = true;
+                if (e.key === ' ' || e.code === 'Space') {
+                    spawnLaser(1);
+                }
+            } else { // 2P mode
+                // P1
+                if (key === 'w') keys.w = true;
+                if (key === 's') keys.s = true;
+                if (key === 'a') keys.a = true;
+                if (key === 'd') keys.d = true;
+                if (e.key === ' ' || e.code === 'Space') {
+                    spawnLaser(1);
+                }
+                
+                // P2
+                if (e.key === 'ArrowUp') keys.arrowup = true;
+                if (e.key === 'ArrowDown') keys.arrowdown = true;
+                if (e.key === 'ArrowLeft') keys.arrowleft = true;
+                if (e.key === 'ArrowRight') keys.arrowright = true;
+                if (e.key === 'Enter') {
+                    spawnLaser(2);
+                }
+            }
+        });
+
+        window.addEventListener('keyup', (e) => {
+            const key = e.key.toLowerCase();
+            if (gameMode === '1P') {
+                if (key === 'w' || e.key === 'ArrowUp') keys.w = false;
+                if (key === 's' || e.key === 'ArrowDown') keys.s = false;
+                if (key === 'a' || e.key === 'ArrowLeft') keys.a = false;
+                if (key === 'd' || e.key === 'ArrowRight') keys.d = false;
+            } else {
+                // P1
+                if (key === 'w') keys.w = false;
+                if (key === 's') keys.s = false;
+                if (key === 'a') keys.a = false;
+                if (key === 'd') keys.d = false;
+                
+                // P2
+                if (e.key === 'ArrowUp') keys.arrowup = false;
+                if (e.key === 'ArrowDown') keys.arrowdown = false;
+                if (e.key === 'ArrowLeft') keys.arrowleft = false;
+                if (e.key === 'ArrowRight') keys.arrowright = false;
+            }
+        });
+
+        window.addEventListener('mousedown', (e) => {
+            if (isGameOver) return;
+            if (e.button === 0) {
+                spawnLaser(1);
+            }
+        });
+
+        // Xử lý kéo chạm di động cho Nova Defender
+        let isTouching = false;
+        let lastTouchX = 0;
+        let lastTouchY = 0;
+        let mobileFireCooldown = 0;
+
+        window.addEventListener('touchstart', (e) => {
+            if (isGameOver) return;
+            if (e.touches.length > 0) {
+                isTouching = true;
+                lastTouchX = e.touches[0].clientX;
+                lastTouchY = e.touches[0].clientY;
+                spawnLaser(1);
+            }
+        }, { passive: true });
+
+        window.addEventListener('touchmove', (e) => {
+            if (isGameOver || !isTouching) return;
+            if (e.touches.length > 0) {
+                const touchX = e.touches[0].clientX;
+                const touchY = e.touches[0].clientY;
+                
+                const dx = touchX - lastTouchX;
+                const dy = touchY - lastTouchY;
+                
+                const sensitivity = 0.025;
+                playerShip.position.x += dx * sensitivity;
+                playerShip.position.y -= dy * sensitivity;
+                
+                playerShip.position.x = Math.max(-config.boundX, Math.min(config.boundX, playerShip.position.x));
+                playerShip.position.y = Math.max(-config.boundY + 1.2, Math.min(config.boundY, playerShip.position.y));
+                
+                playerVel.x = dx * 0.15;
+                
+                lastTouchX = touchX;
+                lastTouchY = touchY;
+            }
+        }, { passive: true });
+
+        window.addEventListener('touchend', () => {
+            isTouching = false;
+            playerVel.x = 0;
+        }, { passive: true });
+
+        // Tạo đạn Laser
+        function spawnLaser(playerNum = 1) {
+            playSynthLaser();
+            const laserGeo = new THREE.CylinderGeometry(0.05, 0.05, 0.8, 8);
+            const colorHex = (playerNum === 1) ? 0x00ff66 : 0xff00ff;
+            const laserMat = new THREE.MeshBasicMaterial({ color: colorHex });
+            
+            const targetShip = (playerNum === 1) ? playerShip : playerShip2;
+            if ((playerNum === 1 && shield <= 0) || (playerNum === 2 && shield2 <= 0)) return; // Don't shoot if dead
+            
+            // Nòng đôi bên cánh
+            [-0.7, 0.7].forEach(offset => {
+                const laser = new THREE.Mesh(laserGeo, laserMat);
+                laser.rotation.x = Math.PI / 2;
+                laser.position.set(targetShip.position.x + offset, targetShip.position.y - 0.1, targetShip.position.z - 1.2);
+                scene.add(laser);
+                lasers.push(laser);
+            });
+        }
+
+        // Tạo thiên thạch
+        function spawnAsteroid() {
+            if (isGameOver) return;
+
+            const size = Math.random() * 0.8 + 0.4;
+            // Dùng khối đa diện Dodecahedron tạo dáng đá gồ ghề
+            const asteroidGeo = new THREE.DodecahedronGeometry(size, 1);
+            const asteroidMat = new THREE.MeshStandardMaterial({
+                color: 0x453530,
+                roughness: 0.9,
+                metalness: 0.1
+            });
+            const mesh = new THREE.Mesh(asteroidGeo, asteroidMat);
+            
+            // Đặt ở vị trí xa phía trước
+            mesh.position.set(
+                (Math.random() - 0.5) * (config.boundX * 2),
+                (Math.random() - 0.5) * (config.boundY * 2),
+                -60
+            );
+
+            // Xoay ngẫu nhiên
+            mesh.rotation.set(Math.random() * Math.PI, Math.random() * Math.PI, 0);
+            
+            scene.add(mesh);
+            
+            asteroids.push({
+                mesh,
+                speed: config.asteroidBaseSpeed + (Math.random() * 0.08) + (wave * 0.015),
+                rotX: (Math.random() - 0.5) * 0.03,
+                rotY: (Math.random() - 0.5) * 0.03,
+                size
+            });
+        }
+
+        // Tạo tàu địch
+        function spawnEnemyShip() {
+            if (isGameOver) return;
+
+            const enemyGroup = new THREE.Group();
+            const neonMat = new THREE.MeshStandardMaterial({
+                color: 0xff0055,
+                emissive: 0xff0055,
+                emissiveIntensity: 0.6
+            });
+            const bodyMat = new THREE.MeshStandardMaterial({ color: 0x1a0f15, roughness: 0.4, metalness: 0.6 });
+
+            // Thân dẹt nhọn
+            const bodyGeo = new THREE.ConeGeometry(0.4, 1.8, 3);
+            const body = new THREE.Mesh(bodyGeo, bodyMat);
+            body.rotation.x = -Math.PI / 2;
+            enemyGroup.add(body);
+
+            // Đèn Neon đỏ hai bên
+            const barGeo = new THREE.BoxGeometry(0.8, 0.1, 0.2);
+            const bar = new THREE.Mesh(barGeo, neonMat);
+            bar.position.set(0, 0, 0.2);
+            enemyGroup.add(bar);
+
+            enemyGroup.position.set(
+                (Math.random() - 0.5) * (config.boundX * 1.5),
+                (Math.random() - 0.5) * (config.boundY * 1.5),
+                -60
+            );
+
+            scene.add(enemyGroup);
+
+            enemies.push({
+                mesh: enemyGroup,
+                speed: config.enemyBaseSpeed + (wave * 0.02)
+            });
+        }
+
+        // Tạo vụ nổ hạt 3D
+        function spawnExplosion(pos3D, colorHex = 0xffa800, count = 25) {
+            playSynthExplosion();
+
+            const pGeo = new THREE.BufferGeometry();
+            const positions = new Float32Array(count * 3);
+            const velocities = [];
+
+            for (let i = 0; i < count; i++) {
+                // Đặt tại tâm vụ nổ
+                positions[i * 3] = pos3D.x;
+                positions[i * 3 + 1] = pos3D.y;
+                positions[i * 3 + 2] = pos3D.z;
+
+                // Vận tốc bung ra
+                const speed = Math.random() * 0.18 + 0.05;
+                const angle1 = Math.random() * Math.PI * 2;
+                const angle2 = Math.random() * Math.PI;
+                velocities.push({
+                    x: Math.sin(angle2) * Math.cos(angle1) * speed,
+                    y: Math.sin(angle2) * Math.sin(angle1) * speed,
+                    z: Math.cos(angle2) * speed
+                });
+            }
+
+            pGeo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+            const pMat = new THREE.PointsMaterial({
+                size: 0.25,
+                color: colorHex,
+                transparent: true,
+                opacity: 1.0,
+                blending: THREE.AdditiveBlending
+            });
+            const pSystem = new THREE.Points(pGeo, pMat);
+            scene.add(pSystem);
+
+            particles.push({
+                mesh: pSystem,
+                velocities,
+                life: 1.0,
+                decay: 0.035
+            });
+        }
+
+        // Cập nhật hoạt ảnh hạt nổ 3D
+        function updateParticles() {
+            for (let i = particles.length - 1; i >= 0; i--) {
+                const p = particles[i];
+                p.life -= p.decay;
+                
+                const pos = p.mesh.geometry.attributes.position.array;
+                const vels = p.velocities;
+                
+                for (let j = 0; j < vels.length; j++) {
+                    pos[j * 3] += vels[j].x;
+                    pos[j * 3 + 1] += vels[j].y;
+                    pos[j * 3 + 2] += vels[j].z;
+                }
+                
+                p.mesh.geometry.attributes.position.needsUpdate = true;
+                p.mesh.material.opacity = p.life;
+
+                if (p.life <= 0) {
+                    scene.remove(p.mesh);
+                    particles.splice(i, 1);
+                }
+            }
+        }
+
+        // Quét Radar quay
+        function updateRadar() {
+            radarSweep.rotation += 0.05;
+            
+            // Xóa điểm radar cũ
+            radarDots.forEach(dot => two.remove(dot));
+            radarDots = [];
+
+            // Vẽ điểm radar của Asteroids
+            asteroids.forEach(ast => {
+                const distZ = Math.min(60, Math.max(0, -ast.mesh.position.z));
+                const relativeRadius = (1 - (distZ / 60)) * 55;
+                const angle = Math.atan2(ast.mesh.position.y, ast.mesh.position.x);
+                const dotX = radarCenter.x + Math.cos(angle) * relativeRadius;
+                const dotY = radarCenter.y + Math.sin(angle) * relativeRadius;
+
+                const dot = two.makeCircle(dotX, dotY, 2.5);
+                dot.fill = '#996633';
+                dot.noStroke();
+                radarDots.push(dot);
+            });
+
+            // Vẽ điểm radar của Enemies
+            enemies.forEach(enemy => {
+                const distZ = Math.min(60, Math.max(0, -enemy.mesh.position.z));
+                const relativeRadius = (1 - (distZ / 60)) * 55;
+                const angle = Math.atan2(enemy.mesh.position.y, enemy.mesh.position.x);
+                const dotX = radarCenter.x + Math.cos(angle) * relativeRadius;
+                const dotY = radarCenter.y + Math.sin(angle) * relativeRadius;
+
+                const dot = two.makeCircle(dotX, dotY, 3);
+                dot.fill = '#ff0055';
+                dot.noStroke();
+                radarDots.push(dot);
+            });
+
+            // Vẽ điểm radar của P1 và P2
+            if (shield > 0) {
+                radarPlayerDot.visible = true;
+                const relXP1 = (playerShip.position.x / config.boundX) * 45;
+                const relYP1 = (playerShip.position.y / config.boundY) * 45;
+                radarPlayerDot.translation.set(radarCenter.x + relXP1, radarCenter.y - relYP1);
+            } else {
+                radarPlayerDot.visible = false;
+            }
+
+            if (gameMode === '2P' && shield2 > 0) {
+                radarPlayer2Dot.visible = true;
+                const relXP2 = (playerShip2.position.x / config.boundX) * 45;
+                const relYP2 = (playerShip2.position.y / config.boundY) * 45;
+                radarPlayer2Dot.translation.set(radarCenter.x + relXP2, radarCenter.y - relYP2);
+            } else {
+                radarPlayer2Dot.visible = false;
+            }
+        }
+
+        // Cập nhật vị trí của Player Ship
+        function updatePlayerShip() {
+            // Player 1
+            if (shield > 0) {
+                if (keys.a) playerVel.x = -config.playerSpeed;
+                else if (keys.d) playerVel.x = config.playerSpeed;
+                else if (!isTouching) playerVel.x *= 0.8;
+
+                if (keys.w) playerVel.y = config.playerSpeed;
+                else if (keys.s) playerVel.y = -config.playerSpeed;
+                else if (!isTouching) playerVel.y *= 0.8;
+
+                if (!isTouching) {
+                    playerShip.position.x += playerVel.x;
+                    playerShip.position.y += playerVel.y;
+                }
+
+                playerShip.position.x = Math.max(-config.boundX, Math.min(config.boundX, playerShip.position.x));
+                playerShip.position.y = Math.max(-config.boundY + 1.2, Math.min(config.boundY, playerShip.position.y));
+
+                if (isTouching) {
+                    mobileFireCooldown++;
+                    if (mobileFireCooldown >= 10) {
+                        spawnLaser(1);
+                        mobileFireCooldown = 0;
+                    }
+                }
+
+                playerShip.rotation.z = -playerVel.x * 2.2;
+                playerShip.rotation.y = -playerVel.x * 0.8;
+
+                engineLight.position.set(playerShip.position.x, playerShip.position.y, playerShip.position.z + 1.5);
+                engineLight.intensity = 3 + Math.random() * 2;
+                engineLight.visible = true;
+            } else {
+                engineLight.visible = false;
+            }
+
+            // Player 2
+            if (gameMode === '2P') {
+                if (shield2 > 0) {
+                    if (keys.arrowleft) playerVel2.x = -config.playerSpeed;
+                    else if (keys.arrowright) playerVel2.x = config.playerSpeed;
+                    else playerVel2.x *= 0.8;
+
+                    if (keys.arrowup) playerVel2.y = config.playerSpeed;
+                    else if (keys.arrowdown) playerVel2.y = -config.playerSpeed;
+                    else playerVel2.y *= 0.8;
+
+                    playerShip2.position.x += playerVel2.x;
+                    playerShip2.position.y += playerVel2.y;
+
+                    playerShip2.position.x = Math.max(-config.boundX, Math.min(config.boundX, playerShip2.position.x));
+                    playerShip2.position.y = Math.max(-config.boundY + 1.2, Math.min(config.boundY, playerShip2.position.y));
+
+                    playerShip2.rotation.z = -playerVel2.x * 2.2;
+                    playerShip2.rotation.y = -playerVel2.x * 0.8;
+
+                    engineLight2.position.set(playerShip2.position.x, playerShip2.position.y, playerShip2.position.z + 1.5);
+                    engineLight2.intensity = 3 + Math.random() * 2;
+                    engineLight2.visible = true;
+                } else {
+                    engineLight2.visible = false;
+                }
+            }
+        }
+
+        // Cập nhật đạn và chướng ngại vật
+        function updateGameObjects() {
+            // Cập nhật đạn Lasers
+            for (let i = lasers.length - 1; i >= 0; i--) {
+                const laser = lasers[i];
+                laser.position.z -= config.laserSpeed;
+                if (laser.position.z < -65) {
+                    scene.remove(laser);
+                    lasers.splice(i, 1);
+                }
+            }
+
+            // Cập nhật Asteroids
+            for (let i = asteroids.length - 1; i >= 0; i--) {
+                const ast = asteroids[i];
+                ast.mesh.position.z += ast.speed;
+                ast.mesh.rotation.x += ast.rotX;
+                ast.mesh.rotation.y += ast.rotY;
+
+                if (ast.mesh.position.z > 10) {
+                    scene.remove(ast.mesh);
+                    asteroids.splice(i, 1);
+                } 
+                else if (ast.mesh.position.z > -0.5 && ast.mesh.position.z < 0.5) {
+                    // P1 collision
+                    if (shield > 0) {
+                        const dist = ast.mesh.position.distanceTo(playerShip.position);
+                        if (dist < ast.size + 0.6) {
+                            decreaseShield(Math.round(ast.size * 30), 1);
+                            spawnExplosion(ast.mesh.position, 0xff5500, 15);
+                            scene.remove(ast.mesh);
+                            asteroids.splice(i, 1);
+                            continue;
+                        }
+                    }
+                    // P2 collision
+                    if (gameMode === '2P' && shield2 > 0) {
+                        const dist2 = ast.mesh.position.distanceTo(playerShip2.position);
+                        if (dist2 < ast.size + 0.6) {
+                            decreaseShield(Math.round(ast.size * 30), 2);
+                            spawnExplosion(ast.mesh.position, 0xff5500, 15);
+                            scene.remove(ast.mesh);
+                            asteroids.splice(i, 1);
+                        }
+                    }
+                }
+            }
+
+            // Cập nhật Enemy Ships
+            for (let i = enemies.length - 1; i >= 0; i--) {
+                const enemy = enemies[i];
+                enemy.mesh.position.z += enemy.speed;
+
+                if (enemy.mesh.position.z > 10) {
+                    scene.remove(enemy.mesh);
+                    enemies.splice(i, 1);
+                } 
+                else if (enemy.mesh.position.z > -0.5 && enemy.mesh.position.z < 0.5) {
+                    // P1 collision
+                    if (shield > 0) {
+                        const dist = enemy.mesh.position.distanceTo(playerShip.position);
+                        if (dist < 1.2) {
+                            decreaseShield(40, 1);
+                            spawnExplosion(enemy.mesh.position, 0xff0055, 20);
+                            scene.remove(enemy.mesh);
+                            enemies.splice(i, 1);
+                            continue;
+                        }
+                    }
+                    // P2 collision
+                    if (gameMode === '2P' && shield2 > 0) {
+                        const dist2 = enemy.mesh.position.distanceTo(playerShip2.position);
+                        if (dist2 < 1.2) {
+                            decreaseShield(40, 2);
+                            spawnExplosion(enemy.mesh.position, 0xff0055, 20);
+                            scene.remove(enemy.mesh);
+                            enemies.splice(i, 1);
+                        }
+                    }
+                }
+            }
+
+            // Kiểm tra va chạm giữa đạn Lasers và chướng ngại vật (Asteroids / Enemies)
+            for (let i = lasers.length - 1; i >= 0; i--) {
+                const laser = lasers[i];
+                let laserHit = false;
+
+                // Check Asteroids
+                for (let j = asteroids.length - 1; j >= 0; j--) {
+                    const ast = asteroids[j];
+                    const dist = laser.position.distanceTo(ast.mesh.position);
+                    
+                    if (dist < ast.size + 0.3) {
+                        spawnExplosion(ast.mesh.position, 0xffaa00, 15);
+                        scene.remove(ast.mesh);
+                        asteroids.splice(j, 1);
+                        laserHit = true;
+                        increaseScore(Math.round(ast.size * 100));
+                        break;
+                    }
+                }
+
+                if (laserHit) {
+                    scene.remove(laser);
+                    lasers.splice(i, 1);
+                    continue;
+                }
+
+                // Check Enemy Ships
+                for (let j = enemies.length - 1; j >= 0; j--) {
+                    const enemy = enemies[j];
+                    const dist = laser.position.distanceTo(enemy.mesh.position);
+
+                    if (dist < 0.9) {
+                        spawnExplosion(enemy.mesh.position, 0xff00ff, 25);
+                        scene.remove(enemy.mesh);
+                        enemies.splice(j, 1);
+                        laserHit = true;
+                        increaseScore(250);
+                        break;
+                    }
+                }
+
+                if (laserHit) {
+                    scene.remove(laser);
+                    lasers.splice(i, 1);
+                }
+            }
+        }
+
+        // Tăng điểm
+        function increaseScore(amount) {
+            score += amount;
+            document.getElementById('score-text').innerText = "SCORE: " + score.toString().padStart(6, '0');
+        }
+
+        // Giảm giáp/máu
+        function decreaseShield(amount, playerNum = 1) {
+            if (playerNum === 1) {
+                shield = Math.max(0, shield - amount);
+                document.getElementById('shield-fill').style.width = shield + '%';
+                if (shield <= 0) {
+                    spawnExplosion(playerShip.position, 0x00f0ff, 40);
+                    scene.remove(playerShip);
+                }
+            } else if (playerNum === 2 && gameMode === '2P') {
+                shield2 = Math.max(0, shield2 - amount);
+                document.getElementById('shield-fill-p2').style.width = shield2 + '%';
+                if (shield2 <= 0) {
+                    spawnExplosion(playerShip2.position, 0xff00ff, 40);
+                    scene.remove(playerShip2);
+                }
+            }
+            
+            // Rung lắc nhẹ camera
+            camera1.position.x += (Math.random() - 0.5) * 0.4;
+            camera1.position.y += (Math.random() - 0.5) * 0.4;
+            camera2.position.x += (Math.random() - 0.5) * 0.4;
+            camera2.position.y += (Math.random() - 0.5) * 0.4;
+
+            const bothDead = (gameMode === '2P' && shield <= 0 && shield2 <= 0) || (gameMode === '1P' && shield <= 0);
+            if (bothDead && !isGameOver) {
+                triggerGameOver();
+            }
+        }
+
+        // Kết thúc trò chơi
+        function triggerGameOver() {
+            isGameOver = true;
+            if (shield > 0) {
+                spawnExplosion(playerShip.position, 0x00f0ff, 40);
+                scene.remove(playerShip);
+            }
+            if (gameMode === '2P' && shield2 > 0) {
+                spawnExplosion(playerShip2.position, 0xff00ff, 40);
+                scene.remove(playerShip2);
+            }
+            
+            document.getElementById('final-score-text').innerText = "ĐIỂM SỐ ĐẠT ĐƯỢC: " + score;
+            document.getElementById('game-over-screen').classList.add('show');
+        }
+
+        // Khởi động lại
+        function restartGame() {
+            isGameOver = false;
+            shield = config.maxShield;
+            shield2 = config.maxShield;
+            score = 0;
+            wave = 1;
+            
+            lasers.forEach(l => scene.remove(l));
+            asteroids.forEach(a => scene.remove(a.mesh));
+            enemies.forEach(e => scene.remove(e.mesh));
+            particles.forEach(p => scene.remove(p.mesh));
+            
+            lasers = [];
+            asteroids = [];
+            enemies = [];
+            particles = [];
+            
+            document.getElementById('shield-fill').style.width = '100%';
+            document.getElementById('shield-fill-p2').style.width = '100%';
+            increaseScore(0);
+            document.getElementById('level-text').innerText = "WAVE 1";
+            document.getElementById('game-over-screen').classList.remove('show');
+
+            // Hồi sinh phi thuyền
+            playerShip.position.set(gameMode === '2P' ? -3 : 0, 0, 0);
+            scene.add(playerShip);
+
+            if (gameMode === '2P') {
+                playerShip2.position.set(3, 0, 0);
+                scene.add(playerShip2);
+                scene.add(engineLight2);
+                radarPlayer2Dot.visible = true;
+            } else {
+                scene.remove(playerShip2);
+                scene.remove(engineLight2);
+                radarPlayer2Dot.visible = false;
+            }
+            
+            showWaveMessage("WAVE 1 START");
+        }
+
+        // Quay lại màn hình chính
+        function showMainMenu() {
+            document.getElementById('game-over-screen').classList.remove('show');
+            document.getElementById('start-menu').style.display = 'flex';
+            
+            lasers.forEach(l => scene.remove(l));
+            asteroids.forEach(a => scene.remove(a.mesh));
+            enemies.forEach(e => scene.remove(e.mesh));
+            particles.forEach(p => scene.remove(p.mesh));
+            
+            lasers = [];
+            asteroids = [];
+            enemies = [];
+            particles = [];
+            
+            scene.remove(playerShip);
+            scene.remove(playerShip2);
+            scene.remove(engineLight2);
+        }
+
+        document.getElementById('btn-1p').addEventListener('click', () => {
+            startGame('1P');
+        });
+        document.getElementById('btn-2p').addEventListener('click', () => {
+            startGame('2P');
+        });
+
+        function startGame(mode) {
+            gameMode = mode;
+            document.getElementById('start-menu').style.display = 'none';
+            
+            if (gameMode === '2P') {
+                document.getElementById('p2-panel').style.display = 'block';
+                document.getElementById('p1-title').innerText = "GIÁP P1 (BLUE)";
+                document.getElementById('p1-controls-desc').innerHTML = 'P1: <span class="key">W</span> <span class="key">A</span> <span class="key">S</span> <span class="key">D</span> | P2: <span class="key">←</span> <span class="key">↑</span> <span class="key">→</span> <span class="key">↓</span>';
+                document.getElementById('p1-fire-desc').innerHTML = 'Bắn đạn: P1 <span class="key">Spacebar</span> | P2 <span class="key">Enter</span>';
+            } else {
+                document.getElementById('p2-panel').style.display = 'none';
+                document.getElementById('p1-title').innerText = "GIÁP PHI THUYỀN (SHIELD)";
+                document.getElementById('p1-controls-desc').innerHTML = 'Di chuyển: <span class="key">W</span> <span class="key">A</span> <span class="key">S</span> <span class="key">D</span> hoặc <span class="key">←</span> <span class="key">↑</span> <span class="key">→</span> <span class="key">↓</span>';
+                document.getElementById('p1-fire-desc').innerHTML = 'Bắn đạn Laser: <span class="key">Spacebar</span> hoặc Click chuột';
+            }
+            
+            restartGame();
+        }
+
+        // Hiện thông báo Wave
+        function showWaveMessage(msgText) {
+            const msgBox = document.getElementById('game-message');
+            msgBox.innerText = msgText;
+            msgBox.classList.add('show');
+            setTimeout(() => {
+                msgBox.classList.remove('show');
+            }, 2500);
+        }
+
+        // --- SPAWN LOOP (TẦN SUẤT XUẤT HIỆN) ---
+        let spawnTimer = 0;
+        let enemySpawnTimer = 0;
+        let waveTimer = 0;
+
+        function handleSpawning() {
+            if (isGameOver) return;
+
+            spawnTimer++;
+            const asteroidDelay = Math.max(20, 60 - wave * 4);
+            if (spawnTimer >= asteroidDelay) {
+                spawnTimer = 0;
+                spawnAsteroid();
+            }
+
+            enemySpawnTimer++;
+            const enemyDelay = Math.max(60, 160 - wave * 10);
+            if (enemySpawnTimer >= enemyDelay) {
+                enemySpawnTimer = 0;
+                spawnEnemyShip();
+            }
+
+            waveTimer++;
+            if (waveTimer >= 1800) {
+                waveTimer = 0;
+                wave++;
+                document.getElementById('level-text').innerText = "WAVE " + wave;
+                showWaveMessage("DANGER! WAVE " + wave);
+            }
+        }
+
+        // --- VÒNG LẶP RENDER (MAIN GAME LOOP) ---
+        renderer.autoClear = false;
+
+        function animate() {
+            requestAnimationFrame(animate);
+
+            if (!isGameOver && document.getElementById('start-menu').style.display !== 'flex') {
+                updatePlayerShip();
+                updateGameObjects();
+                handleSpawning();
+            }
+
+            starfield.position.z += 0.08 + (wave * 0.01);
+            if (starfield.position.z > 40) {
+                starfield.position.z = 0;
+            }
+
+            updateParticles();
+            updateRadar();
+
+            // Clear screen manually since autoClear is false
+            renderer.clear();
+
+            if (gameMode === '2P') {
+                // Left screen: Player 1
+                renderer.setViewport(0, 0, window.innerWidth / 2, window.innerHeight);
+                renderer.setScissor(0, 0, window.innerWidth / 2, window.innerHeight);
+                renderer.setScissorTest(true);
+
+                if (shield > 0) {
+                    camera1.position.x = playerShip.position.x;
+                    camera1.position.y = playerShip.position.y + 1.8;
+                } else {
+                    camera1.position.set(0, 1.8, 8);
+                }
+                camera1.lookAt(camera1.position.x, camera1.position.y - 1.8, -5);
+                renderer.render(scene, camera1);
+
+                // Right screen: Player 2
+                renderer.setViewport(window.innerWidth / 2, 0, window.innerWidth / 2, window.innerHeight);
+                renderer.setScissor(window.innerWidth / 2, 0, window.innerWidth / 2, window.innerHeight);
+                renderer.setScissorTest(true);
+
+                if (shield2 > 0) {
+                    camera2.position.x = playerShip2.position.x;
+                    camera2.position.y = playerShip2.position.y + 1.8;
+                } else {
+                    camera2.position.set(0, 1.8, 8);
+                }
+                camera2.lookAt(camera2.position.x, camera2.position.y - 1.8, -5);
+                renderer.render(scene, camera2);
+            } else {
+                // Single screen
+                renderer.setViewport(0, 0, window.innerWidth, window.innerHeight);
+                renderer.setScissor(0, 0, window.innerWidth, window.innerHeight);
+                renderer.setScissorTest(false);
+
+                if (shield > 0) {
+                    camera1.position.x = playerShip.position.x * 0.5;
+                    camera1.position.y = playerShip.position.y * 0.5 + 1.8;
+                } else {
+                    camera1.position.set(0, 1.8, 8);
+                }
+                camera1.lookAt(0, 0, -5);
+                renderer.render(scene, camera1);
+            }
+        }
+
+        // --- LẮNG NGHE CO GIÃN MÀN HÌNH ---
+        window.addEventListener('resize', () => {
+            const aspect = (gameMode === '2P') ? (window.innerWidth / 2 / window.innerHeight) : (window.innerWidth / window.innerHeight);
+            camera1.aspect = aspect;
+            camera1.updateProjectionMatrix();
+            camera2.aspect = aspect;
+            camera2.updateProjectionMatrix();
+
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            two.setSize(window.innerWidth, window.innerHeight);
+            
+            radarCenter.x = window.innerWidth - 100;
+            radarCenter.y = window.innerHeight - 100;
+            radarBg.translation.set(radarCenter.x, radarCenter.y);
+            radarSweep.translation.set(radarCenter.x, radarCenter.y);
+            radarPlayerDot.translation.set(radarCenter.x, radarCenter.y);
+            radarPlayer2Dot.translation.set(radarCenter.x, radarCenter.y);
+        });
+
+        // Khởi động hiển thị menu chính trước
+        showMainMenu();
+        animate();
+
+    </script>
+    <a href="index.html" id="global-exit-btn" style="
+        position: fixed;
+        top: 15px;
+        left: 15px;
+        z-index: 99999;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 10px 20px;
+        background: rgba(15, 23, 42, 0.6);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        border: 1px solid rgba(255, 255, 255, 0.15);
+        border-radius: 12px;
+        color: #f3f4f6;
+        text-decoration: none;
+        font-family: 'Outfit', 'Segoe UI', sans-serif;
+        font-size: 14px;
+        font-weight: 600;
+        letter-spacing: 0.5px;
+        box-shadow: 0 4px 30px rgba(0, 0, 0, 0.3);
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        cursor: pointer;
+    ">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="transition: transform 0.3s ease;">
+            <path d="M19 12H5M12 19l-7-7 7-7"/>
+        </svg>
+        Thoát
+    </a>
+
+    <script>
+        document.getElementById('global-exit-btn').addEventListener('click', function(e) {
+            e.preventDefault();
+            this.style.transform = 'scale(0.95)';
+            setTimeout(() => {
+                const lobby = document.getElementById('start-menu');
+                const lobbyVisible = lobby && lobby.style.display !== 'none';
+                
+                if (!lobbyVisible) {
+                    showMainMenu();
+                    this.style.transform = 'scale(1)';
+                } else {
+                    if (window.opener && window.history.length === 1) {
+                        window.close();
+                    } else {
+                        window.location.href = 'index.html';
+                    }
+                }
+            }, 150);
+        });
+
+        const exitBtn = document.getElementById('global-exit-btn');
+        exitBtn.addEventListener('mouseenter', function() {
+            this.style.background = 'rgba(99, 102, 241, 0.3)';
+            this.style.borderColor = 'rgba(99, 102, 241, 0.6)';
+            this.style.boxShadow = '0 0 15px rgba(99, 102, 241, 0.4)';
+            this.querySelector('svg').style.transform = 'translateX(-3px)';
+        });
+        exitBtn.addEventListener('mouseleave', function() {
+            this.style.background = 'rgba(15, 23, 42, 0.6)';
+            this.style.borderColor = 'rgba(255, 255, 255, 0.15)';
+            this.style.boxShadow = '0 4px 30px rgba(0, 0, 0, 0.3)';
+            this.querySelector('svg').style.transform = 'translateX(0)';
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,1411 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Câu Cá Đại Dương - Tứ Thần Thú Trỗi Dậy</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { margin: 0; overflow: hidden; font-family: 'Inter', sans-serif; background-color: #0f172a; }
+        #gameCanvas { display: block; background: linear-gradient(to bottom, #070a13, #020308); }
+        #ui-layer { position: absolute; top: 0; left: 0; width: 100%; pointer-events: none; }
+    </style>
+</head>
+<body>
+
+    <!-- Màn hình Bắt đầu (Sửa lỗi chặn âm thanh & chọn Chế độ Tứ Linh) -->
+    <div id="start-screen" class="fixed inset-0 bg-slate-950/95 backdrop-blur-md flex flex-col items-center justify-center text-white z-50 transition-opacity duration-300">
+        <div class="bg-slate-900/95 p-8 rounded-3xl border border-red-500/40 shadow-2xl text-center max-w-lg w-full mx-4 overflow-y-auto max-h-[90vh]">
+            <span class="text-6xl animate-pulse inline-block">☄️🐉🐅🐢🔥</span>
+            <h1 class="text-3xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-red-500 via-orange-400 to-yellow-500 mt-4 tracking-wider uppercase">TỨ THẦN THÚ TRỖI DẬY</h1>
+            <p class="text-slate-300 mt-3 text-sm leading-relaxed">
+                Nhiệm vụ của bạn là khuất phục thành công <span class="text-yellow-400 font-bold">15 sinh vật truyền thuyết</span> để hoàn thành thử thách thần thoại.
+            </p>
+            
+            <div class="my-5">
+                <p class="text-xs text-slate-400 mb-2 font-bold uppercase tracking-widest">Chọn Chế Độ Chơi:</p>
+                <div class="flex justify-center gap-4">
+                    <button id="btn-normal" onclick="selectMode(false)" class="px-5 py-2.5 rounded-xl font-bold border border-cyan-500 bg-cyan-950/40 text-cyan-400 transition-all active:scale-95">Thường (Sinh vật biển)</button>
+                    <button id="btn-hard" onclick="selectMode(true)" class="px-5 py-2.5 rounded-xl font-bold border border-red-500 bg-red-600 text-white shadow-lg shadow-red-500/40 transition-all active:scale-95">HỖN MANG TỨ LINH ☄️</button>
+                </div>
+            </div>
+
+
+
+            <div class="bg-slate-800/80 p-4 rounded-xl my-5 text-left text-xs text-slate-300 space-y-3 border border-slate-700">
+                <p class="font-bold text-red-400 text-sm">🔥 CHẾ ĐỘ TỨ LINH (SIÊU ĐÁNG SỢ):</p>
+                <p class="text-cyan-300">• 🐉 <strong>Thanh Long:</strong> Thân rồng lục bảo sừng vàng, phóng tia sét dữ dội. Giãy cực mạnh!</p>
+                <p class="text-slate-200">• 🐅 <strong>Bạch Hổ:</strong> Mãnh hổ sương sát lông bạc sọc huyết, lao vút điên cuồng.</p>
+                <p class="text-emerald-400">• 🐢 <strong>Huyền Vũ:</strong> Linh quy khổng lồ. Di chuyển nặng nề, ghì đứt dây rất nhanh!</p>
+                <p class="text-orange-400">• 🦅 <strong>Chu Tước:</strong> Hỏa điểu hung hãn, rỉ ngọn lửa và tàn tro.</p>
+                <p class="font-bold text-red-400 text-[11px] uppercase tracking-widest animate-pulse text-center bg-red-950/50 py-1.5 rounded">Cảnh báo: Sức căng dây câu dâng vọt gấp 3 lần! Hãy nhấp nhả phím Cách / Mũi tên Lên cực kỳ điêu luyện!</p>
+            </div>
+            <button onclick="startGame()" class="w-full py-4 bg-gradient-to-r from-red-600 via-orange-600 to-amber-500 hover:from-red-500 hover:to-orange-500 text-white font-extrabold rounded-xl shadow-lg hover:shadow-red-500/20 active:scale-95 transition-all duration-150 cursor-pointer pointer-events-auto">
+                CHINH PHỤC TỨ THẦN THÚ
+            </button>
+        </div>
+    </div>
+
+    <!-- Lớp giao diện hiển thị điểm số và nhiệm vụ -->
+    <div id="ui-layer" class="p-4 md:p-6 flex justify-between text-white select-none z-10">
+        <div class="bg-slate-900/80 p-3 md:p-4 rounded-2xl border border-red-500/30 backdrop-blur-md shadow-2xl">
+            <h1 id="game-title" class="text-lg md:text-xl font-extrabold tracking-wider bg-gradient-to-r from-red-500 to-amber-500 bg-clip-text text-transparent">HỖN MANG TỨ LINH</h1>
+            <div>
+                <p id="score" class="text-2xl md:text-3xl font-mono font-bold text-yellow-400 mt-1">Điểm: 0</p>
+                <p id="mission" class="text-xs md:text-sm font-semibold text-rose-300 mt-1">Nhiệm vụ: 0/15 thần thú</p>
+            </div>
+        </div>
+        <div class="bg-slate-900/80 p-4 rounded-2xl border border-red-500/30 backdrop-blur-md text-right text-sm hidden md:block">
+            <p class="text-red-400 font-bold uppercase tracking-wide">Chế độ Ghì Câu Sinh Tử:</p>
+            <p class="text-slate-300">CLICK Chuột hoặc phím SPACE để giữ kéo câu</p>
+        </div>
+    </div>
+
+    <!-- Màn hình chiến thắng nghệ thuật chúc mừng người chơi -->
+    <div id="win-screen" class="hidden fixed inset-0 bg-slate-950/80 backdrop-blur-md flex flex-col items-center justify-center text-white z-50">
+        <div class="bg-slate-900 p-8 rounded-3xl border border-yellow-500/50 shadow-2xl text-center max-w-sm w-full mx-4 transform scale-95 transition-all duration-300">
+            <span class="text-6xl animate-pulse">👑🐉⚔️</span>
+            <h2 class="text-3xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 to-amber-500 mt-4 tracking-wider">KỶ NGUYÊN CHINH PHỤC!</h2>
+            <p class="text-slate-300 mt-2">Bạn đã chế ngự thành công Tứ Thần Thú viễn cổ, ghi danh vào thần sử!</p>
+            <div class="bg-slate-800 p-4 rounded-xl my-6">
+                <p class="text-sm text-slate-400">Điểm số Tối Cao</p>
+                <p id="final-score" class="text-4xl font-mono font-bold text-yellow-300">0</p>
+            </div>
+            <button onclick="resetGame()" class="w-full py-3 bg-gradient-to-r from-red-500 via-orange-600 to-yellow-500 hover:from-red-400 hover:to-orange-500 text-white font-extrabold rounded-xl shadow-lg hover:shadow-red-500/20 active:scale-95 transition-all duration-150 pointer-events-auto cursor-pointer">
+                ĐẤU LẠI
+            </button>
+        </div>
+    </div>
+
+    <canvas id="gameCanvas"></canvas>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const scoreElement = document.getElementById('score');
+        const missionElement = document.getElementById('mission');
+        const winScreen = document.getElementById('win-screen');
+        const startScreen = document.getElementById('start-screen');
+        const finalScoreElement = document.getElementById('final-score');
+        const gameTitle = document.getElementById('game-title');
+        
+        let width, height, score = 0;
+        let caughtCount = 0;
+        const maxMission = 15;
+        let gameActive = false; 
+        let isHardMode = true; 
+
+        let mouseX = window.innerWidth / 2 || 400;
+        let hook = { x: mouseX, depth: 80, casting: false, returning: false, fishes: [] };
+        let fishArray = [];
+        let bubbles = [];
+        let sunRays = [];
+        let bloodParticles = []; 
+        let fallingFishes = []; 
+        let notifications = []; 
+        let corals = []; 
+
+        let tension = 0; 
+        let tension2 = 0;
+        let isPressing = false; 
+        let isPressing2 = false;
+
+        let audioCtx = null;
+
+        function initAudio() {
+            if (!audioCtx) {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            }
+            if (audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+        }
+
+
+
+        function selectMode(hard) {
+            initAudio();
+            isHardMode = hard;
+            const btnNormal = document.getElementById('btn-normal');
+            const btnHard = document.getElementById('btn-hard');
+            if (hard) {
+                btnHard.className = "px-5 py-2.5 rounded-xl font-bold border border-red-500 bg-red-600 text-white shadow-lg shadow-red-500/40 transition-all active:scale-95";
+                btnNormal.className = "px-5 py-2.5 rounded-xl font-bold border border-cyan-500 bg-cyan-950/40 text-cyan-400 transition-all active:scale-95";
+                gameTitle.innerText = "HỖN MANG TỨ LINH";
+                gameTitle.className = "text-lg md:text-xl font-extrabold tracking-wider bg-gradient-to-r from-red-500 to-orange-400 bg-clip-text text-transparent";
+            } else {
+                btnNormal.className = "px-5 py-2.5 rounded-xl font-bold border border-cyan-500 bg-cyan-600 text-white shadow-lg shadow-cyan-500/40 transition-all active:scale-95";
+                btnHard.className = "px-5 py-2.5 rounded-xl font-bold border border-rose-500 bg-rose-950/40 text-rose-400 transition-all active:scale-95";
+                gameTitle.innerText = "CÂU CÁ ĐẠI DƯƠNG";
+                gameTitle.className = "text-lg md:text-xl font-extrabold tracking-wider bg-gradient-to-r from-cyan-400 to-blue-500 bg-clip-text text-transparent";
+            }
+        }
+
+        function playBiteSound() {
+            initAudio();
+            if (!audioCtx) return;
+
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+
+            osc.type = 'sawtooth'; 
+            osc.frequency.setValueAtTime(120, audioCtx.currentTime);
+            osc.frequency.exponentialRampToValueAtTime(650, audioCtx.currentTime + 0.18);
+
+            gain.gain.setValueAtTime(0.25, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.18);
+
+            osc.start();
+            osc.stop(audioCtx.currentTime + 0.18);
+        }
+
+        function playSnapSound() {
+            initAudio();
+            if (!audioCtx) return;
+
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+
+            osc.type = 'square';
+            osc.frequency.setValueAtTime(900, audioCtx.currentTime);
+            osc.frequency.exponentialRampToValueAtTime(80, audioCtx.currentTime + 0.15);
+
+            gain.gain.setValueAtTime(0.4, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.15);
+
+            osc.start();
+            osc.stop(audioCtx.currentTime + 0.15);
+        }
+
+        function playSuccessSound(comboCount) {
+            initAudio();
+            if (!audioCtx) return;
+
+            const chords = [523.25, 659.25, 783.99, 1046.50, 1567.98];
+            const steps = Math.min(2 + comboCount, 5);
+            for (let i = 0; i < steps; i++) {
+                setTimeout(() => {
+                    if (!audioCtx || audioCtx.state === 'suspended') return;
+                    const osc = audioCtx.createOscillator();
+                    const gain = audioCtx.createGain();
+                    osc.connect(gain);
+                    gain.connect(audioCtx.destination);
+
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(chords[i], audioCtx.currentTime);
+
+                    gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.4);
+
+                    osc.start();
+                    osc.stop(audioCtx.currentTime + 0.4);
+                }, i * 90);
+            }
+        }
+
+        class BloodParticle {
+            constructor(x, y, dx, dy, size, color) {
+                this.x = x;
+                this.y = y;
+                this.dx = dx;
+                this.dy = dy;
+                this.size = size || Math.random() * 3 + 1.5;
+                this.alpha = 0.95;
+                this.decay = 0.012 + Math.random() * 0.015;
+                this.color = color || 'rgba(239, 68, 68, ';
+            }
+            update() {
+                this.x += this.dx;
+                this.y += this.dy;
+                this.dx *= 0.96;
+                this.dy *= 0.96;
+                this.dy -= 0.03; 
+                this.alpha -= this.decay;
+            }
+            draw() {
+                ctx.fillStyle = this.color + `${this.alpha})`; 
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+
+        function spawnMythicExplosion(x, y, type, multiplier = 1) {
+            const count = 30 * multiplier;
+            for (let i = 0; i < count; i++) {
+                const angle = Math.random() * Math.PI * 2;
+                const speed = Math.random() * 7 + 2.0;
+                const dx = Math.cos(angle) * speed;
+                const dy = Math.sin(angle) * speed;
+                
+                let colorString = 'rgba(239, 68, 68, '; 
+                if (type === 'chutuoc') {
+                    colorString = Math.random() < 0.6 ? 'rgba(249, 115, 22, ' : 'rgba(234, 179, 8, '; 
+                } else if (type === 'thanhlong') {
+                    colorString = Math.random() < 0.6 ? 'rgba(6, 182, 212, ' : 'rgba(16, 185, 129, '; 
+                } else if (type === 'bachho') {
+                    colorString = Math.random() < 0.6 ? 'rgba(241, 245, 249, ' : 'rgba(148, 163, 184, '; 
+                } else if (type === 'huyenvu') {
+                    colorString = Math.random() < 0.6 ? 'rgba(168, 85, 247, ' : 'rgba(15, 23, 42, '; 
+                }
+                bloodParticles.push(new BloodParticle(x, y, dx, dy, Math.random() * 5 + 2, colorString));
+            }
+        }
+
+        class SunRay {
+            constructor() {
+                this.x = Math.random() * width;
+                this.width = 40 + Math.random() * 80;
+                this.opacity = 0.03 + Math.random() * 0.05;
+                this.speed = 0.002 + Math.random() * 0.003;
+                this.angle = -0.2 - Math.random() * 0.2;
+            }
+            update() {
+                this.opacity = (isHardMode ? 0.08 : 0.04) + Math.sin(Date.now() * this.speed) * 0.03;
+            }
+            draw() {
+                ctx.save();
+                ctx.fillStyle = isHardMode ? `rgba(185, 28, 28, ${this.opacity})` : `rgba(14, 165, 233, ${this.opacity})`;
+                ctx.beginPath();
+                ctx.moveTo(this.x, 0);
+                ctx.lineTo(this.x + this.width, 0);
+                ctx.lineTo(this.x + this.width + height * Math.tan(this.angle), height);
+                ctx.lineTo(this.x + height * Math.tan(this.angle), height);
+                ctx.closePath();
+                ctx.fill();
+                ctx.restore();
+            }
+        }
+
+        class Bubble {
+            constructor(x, y, isSplash) {
+                this.x = x !== undefined ? x : Math.random() * width;
+                this.y = y !== undefined ? y : height + 10;
+                this.size = Math.random() * (isSplash ? 4 : 4.5) + 1.5;
+                this.speed = isSplash ? Math.random() * 3 + 2.0 : Math.random() * 1.5 + 0.8;
+                this.isSplash = isSplash || false;
+            }
+            update() {
+                this.y -= this.speed;
+                if (this.isSplash) {
+                    this.x += Math.sin(this.y / 6) * 1.2; 
+                } else {
+                    this.x += Math.sin(this.y / 30) * 0.3;
+                }
+            }
+            draw() {
+                ctx.strokeStyle = this.isSplash ? 'rgba(239, 68, 68, 0.45)' : 'rgba(255, 255, 255, 0.22)';
+                ctx.lineWidth = 1;
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.02)';
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.stroke();
+            }
+        }
+
+        function initCorals() {
+            corals = [];
+            const count = 16;
+            for (let i = 0; i < count; i++) {
+                const colors = isHardMode 
+                    ? ['#dc2626', '#7f1d1d', '#581c87', '#030712', '#0f172a', '#450a0a']
+                    : ['#f43f5e', '#ec4899', '#a855f7', '#f97316', '#14b8a6', '#facc15'];
+                corals.push({
+                    x: (i * (width / (count - 1))) + (Math.random() * 30 - 15),
+                    height: 60 + Math.random() * 80,
+                    color: colors[Math.floor(Math.random() * colors.length)],
+                    type: Math.floor(Math.random() * 3), 
+                    phase: Math.random() * Math.PI * 2
+                });
+            }
+        }
+
+        function drawCorals() {
+            corals.forEach(c => {
+                ctx.save();
+                ctx.translate(c.x, height);
+                const wave = Math.sin(Date.now() * 0.0015 + c.phase) * 0.07;
+                ctx.rotate(wave);
+                ctx.fillStyle = c.color;
+
+                if (c.type === 0) { 
+                    ctx.beginPath();
+                    ctx.moveTo(-6, 0);
+                    ctx.quadraticCurveTo(-15, -c.height * 0.4, -10, -c.height * 0.5);
+                    ctx.quadraticCurveTo(-2, -c.height * 0.6, -4, -c.height);
+                    ctx.quadraticCurveTo(2, -c.height, 0, -c.height * 0.4);
+                    ctx.quadraticCurveTo(15, -c.height * 0.5, 8, -c.height * 0.8);
+                    ctx.quadraticCurveTo(12, -c.height * 0.85, 3, -c.height * 0.3);
+                    ctx.lineTo(6, 0);
+                    ctx.closePath();
+                    ctx.fill();
+                } else if (c.type === 1) { 
+                    ctx.beginPath();
+                    ctx.moveTo(-10, 0);
+                    ctx.bezierCurveTo(-25, -c.height * 0.4, 25, -c.height * 0.4, 10, 0);
+                    ctx.closePath();
+                    ctx.fill();
+                } else { 
+                    ctx.fillStyle = isHardMode ? '#581c87' : '#10b981';
+                    ctx.beginPath();
+                    ctx.moveTo(-4, 0);
+                    ctx.quadraticCurveTo(-15, -c.height * 0.5, -4, -c.height * 1.3);
+                    ctx.quadraticCurveTo(5, -c.height * 0.5, 4, 0);
+                    ctx.closePath();
+                    ctx.fill();
+                }
+                ctx.restore();
+            });
+        }
+
+        class Fish {
+            constructor() {
+                if (isHardMode) {
+                    const hardTypes = ['chutuoc', 'thanhlong', 'bachho', 'huyenvu'];
+                    this.type = hardTypes[Math.floor(Math.random() * hardTypes.length)];
+                } else {
+                    const normalTypes = ['trout', 'bass', 'minnow', 'squid', 'turtle', 'octopus'];
+                    this.type = normalTypes[Math.floor(Math.random() * normalTypes.length)];
+                }
+                
+                if (this.type === 'huyenvu' || this.type === 'octopus') {
+                    this.y = height - 160 - Math.random() * 80;
+                } else {
+                    this.y = 220 + Math.random() * (height - 360);
+                }
+
+                this.x = Math.random() > 0.5 ? -200 : width + 200;
+                
+                if (this.type === 'chutuoc') {
+                    this.speed = 3.8 + Math.random() * 2.0; 
+                    this.points = 180;
+                    this.name = "Phượng Hoàng Chu Tước";
+                } else if (this.type === 'thanhlong') {
+                    this.speed = 4.2 + Math.random() * 2.4; 
+                    this.points = 250;
+                    this.name = "Thanh Long Sấm Sét";
+                } else if (this.type === 'bachho') {
+                    this.speed = 4.8 + Math.random() * 2.6; 
+                    this.points = 200;
+                    this.name = "Mãnh Hổ Sương Sát";
+                } else if (this.type === 'huyenvu') {
+                    this.speed = 1.0 + Math.random() * 0.8; 
+                    this.points = 300;
+                    this.name = "Huyền Vũ Vương";
+                } else {
+                    this.speed = 1.6 + Math.random() * 2.0;
+                    this.points = this.type === 'turtle' ? 50 : (this.type === 'octopus' ? 40 : 20);
+                    this.name = "Sinh Vật Biển";
+                }
+
+                this.dir = this.x < 0 ? 1 : -1;
+                this.size = isHardMode ? (45 + Math.random() * 15) : (28 + Math.random() * 20);
+                this.tailAngle = Math.random() * 100;
+                this.tailSpeed = isHardMode ? 0.26 : 0.15; 
+                this.pulseTimer = Math.random() * 10; 
+            }
+
+            update() {
+                if (this.type === 'chutuoc' || this.type === 'thanhlong') {
+                    this.pulseTimer += 0.08;
+                    this.x += this.speed * this.dir;
+                    this.y += Math.sin(this.pulseTimer) * 7;
+                } else if (this.type === 'bachho') {
+                    this.pulseTimer += 0.05;
+                    const dash = Math.max(0.4, Math.sin(this.pulseTimer));
+                    this.x += this.speed * this.dir * (0.5 + dash * 2.5);
+                } else {
+                    this.x += this.speed * this.dir;
+                }
+                this.tailAngle += this.tailSpeed;
+            }
+
+            draw(x, y, caughtIndex) {
+                const drawX = x !== undefined ? x : this.x;
+                const drawY = y !== undefined ? y : this.y;
+                
+                ctx.save();
+                const s = this.size;
+                const wiggle = Math.sin(this.tailAngle) * 6;
+
+                if (x !== undefined) {
+                    ctx.translate(drawX, drawY);
+                    const swingAngle = Math.sin(Date.now() / 45 + (caughtIndex || 0) * 2.5) * 0.35;
+                    ctx.rotate(-Math.PI / 2 + swingAngle);
+                    ctx.translate(-s, 0);
+                    ctx.scale(1, 1);
+                } else {
+                    ctx.translate(drawX, drawY);
+                    if (this.dir === -1) {
+                        ctx.scale(-1, 1);
+                    }
+                }
+
+                // 🐉 STREAMING_CHUNK: Drawing Thanh Long the Azure Dragon...
+                if (this.type === 'thanhlong') {
+                    ctx.shadowColor = '#06b6d4';
+                    ctx.shadowBlur = 15;
+
+                    ctx.strokeStyle = '#1e40af';
+                    ctx.lineWidth = 6;
+                    ctx.beginPath();
+                    ctx.moveTo(0, 0);
+                    for (let d_idx = 1; d_idx <= 5; d_idx++) {
+                        const segmentX = -s * 0.35 * d_idx;
+                        const segmentY = Math.sin(this.tailAngle * 0.8 + d_idx) * 15;
+                        ctx.lineTo(segmentX, segmentY);
+                        
+                        ctx.fillStyle = d_idx % 2 === 0 ? '#06b6d4' : '#10b981';
+                        ctx.beginPath();
+                        ctx.arc(segmentX, segmentY, s * (0.4 - d_idx * 0.05), 0, Math.PI * 2);
+                        ctx.fill();
+                    }
+                    ctx.stroke();
+
+                    ctx.fillStyle = '#10b981';
+                    ctx.beginPath();
+                    const endX = -s * 1.75;
+                    const endY = Math.sin(this.tailAngle * 0.8 + 5) * 15;
+                    ctx.moveTo(endX, endY);
+                    ctx.lineTo(endX - 25, endY - 12);
+                    ctx.lineTo(endX - 15, endY);
+                    ctx.lineTo(endX - 25, endY + 12);
+                    ctx.closePath();
+                    ctx.fill();
+
+                    ctx.fillStyle = '#fbbf24';
+                    ctx.beginPath();
+                    ctx.moveTo(s * 0.6, -s * 0.25);
+                    ctx.lineTo(s * 0.9, -s * 0.7);
+                    ctx.lineTo(s * 0.75, -s * 0.2);
+                    ctx.lineTo(s * 1.05, -s * 0.65);
+                    ctx.lineTo(s * 0.8, -s * 0.1);
+                    ctx.closePath();
+                    ctx.fill();
+
+                    const headGrad = ctx.createRadialGradient(s * 0.5, 0, 5, 0, 0, s * 0.9);
+                    headGrad.addColorStop(0, '#06b6d4');
+                    headGrad.addColorStop(0.5, '#1e3a8a');
+                    headGrad.addColorStop(1, '#020617');
+                    ctx.fillStyle = headGrad;
+                    ctx.beginPath();
+                    ctx.ellipse(s * 0.3, 0, s * 0.75, s * 0.48, 0, 0, Math.PI * 2);
+                    ctx.fill();
+
+                    ctx.strokeStyle = '#fbbf24';
+                    ctx.lineWidth = 2.5;
+                    ctx.beginPath();
+                    ctx.moveTo(s * 0.8, s * 0.15);
+                    ctx.quadraticCurveTo(s * 1.4, s * 0.5 + wiggle, s * 1.7, s * 0.2 + wiggle);
+                    ctx.stroke();
+
+                    ctx.fillStyle = '#ffffff';
+                    ctx.beginPath();
+                    ctx.moveTo(s * 0.7, s * 0.2);
+                    ctx.lineTo(s * 0.85, s * 0.38);
+                    ctx.lineTo(s * 0.9, s * 0.18);
+                    ctx.lineTo(s * 1.05, s * 0.35);
+                    ctx.lineTo(s * 1.0, s * 0.1);
+                    ctx.closePath();
+                    ctx.fill();
+
+                    ctx.fillStyle = '#facc15';
+                    ctx.shadowColor = '#facc15';
+                    ctx.shadowBlur = 12;
+                    ctx.beginPath();
+                    ctx.ellipse(s * 0.52, -s * 0.15, s * 0.08, s * 0.14, Math.PI / 6, 0, Math.PI * 2);
+                    ctx.fill();
+
+                // 🐅 STREAMING_CHUNK: Drawing Bach Ho the White Tiger...
+                } else if (this.type === 'bachho') {
+                    ctx.shadowColor = '#94a3b8';
+                    ctx.shadowBlur = 14;
+
+                    const tigerGrad = ctx.createLinearGradient(-s, 0, s, 0);
+                    tigerGrad.addColorStop(0, '#cbd5e1');
+                    tigerGrad.addColorStop(0.5, '#ffffff');
+                    tigerGrad.addColorStop(1, '#475569');
+                    ctx.fillStyle = tigerGrad;
+                    
+                    ctx.beginPath();
+                    ctx.ellipse(0, 0, s * 0.95, s * 0.58, 0, 0, Math.PI * 2);
+                    ctx.fill();
+
+                    ctx.fillStyle = '#0f172a';
+                    for (let i = -3; i <= 3; i++) {
+                        ctx.beginPath();
+                        ctx.moveTo(i * s * 0.2, -s * 0.55);
+                        ctx.quadraticCurveTo(i * s * 0.2 - 6, 0, i * s * 0.2, s * 0.55);
+                        ctx.lineTo(i * s * 0.2 + 8, s * 0.55);
+                        ctx.quadraticCurveTo(i * s * 0.2 + 2, 0, i * s * 0.2 + 8, -s * 0.55);
+                        ctx.closePath();
+                        ctx.fill();
+                    }
+
+                    ctx.fillStyle = '#e2e8f0';
+                    ctx.beginPath();
+                    ctx.ellipse(-s * 0.4, s * 0.45, s * 0.16, s * 0.35, Math.PI / 5, 0, Math.PI * 2);
+                    ctx.ellipse(s * 0.2, s * 0.45, s * 0.16, s * 0.35, -Math.PI / 5, 0, Math.PI * 2);
+                    ctx.fill();
+
+                    ctx.strokeStyle = '#ffffff';
+                    ctx.lineWidth = 6;
+                    ctx.beginPath();
+                    ctx.moveTo(-s * 0.8, 0);
+                    ctx.quadraticCurveTo(-s * 1.5, -s * 0.5 + wiggle, -s * 1.9, wiggle);
+                    ctx.stroke();
+
+                    ctx.fillStyle = '#f8fafc';
+                    ctx.beginPath();
+                    ctx.arc(s * 0.8, -s * 0.1, s * 0.35, 0, Math.PI * 2);
+                    ctx.fill();
+
+                    ctx.fillStyle = '#475569';
+                    ctx.beginPath();
+                    ctx.moveTo(s * 0.65, -s * 0.35);
+                    ctx.lineTo(s * 0.58, -s * 0.62);
+                    ctx.lineTo(s * 0.85, -s * 0.42);
+                    ctx.closePath();
+                    ctx.fill();
+
+                    ctx.fillStyle = '#ef4444';
+                    ctx.shadowColor = '#ef4444';
+                    ctx.shadowBlur = 10;
+                    ctx.beginPath();
+                    ctx.ellipse(s * 0.88, -s * 0.15, s * 0.05, s * 0.1, -Math.PI / 4, 0, Math.PI * 2);
+                    ctx.fill();
+
+                    ctx.fillStyle = '#ffffff';
+                    ctx.beginPath();
+                    ctx.moveTo(s * 0.95, 0);
+                    ctx.lineTo(s * 1.1, s * 0.25);
+                    ctx.lineTo(s * 1.0, 0.05);
+                    ctx.closePath();
+                    ctx.fill();
+
+                // 🐢 STREAMING_CHUNK: Drawing Huyen Vu the Black Tortoise...
+                } else if (this.type === 'huyenvu') {
+                    ctx.shadowColor = '#a855f7';
+                    ctx.shadowBlur = 16;
+
+                    ctx.fillStyle = '#1e1b4b';
+                    ctx.beginPath();
+                    ctx.ellipse(-s * 0.4, s * 0.38, s * 0.22, s * 0.4, Math.PI / 4, 0, Math.PI * 2);
+                    ctx.ellipse(s * 0.4, s * 0.38, s * 0.22, s * 0.4, -Math.PI / 4, 0, Math.PI * 2);
+                    ctx.fill();
+
+                    const shellGrad = ctx.createRadialGradient(0, 0, 5, 0, 0, s * 1.05);
+                    shellGrad.addColorStop(0, '#581c87'); 
+                    shellGrad.addColorStop(0.7, '#020617'); 
+                    shellGrad.addColorStop(1, '#3b0764');
+                    ctx.fillStyle = shellGrad;
+                    ctx.beginPath();
+                    ctx.ellipse(0, 0, s * 1.05, s * 0.8, 0, 0, Math.PI * 2);
+                    ctx.fill();
+
+                    ctx.fillStyle = '#120424';
+                    ctx.strokeStyle = '#a855f7';
+                    ctx.lineWidth = 1.5;
+                    // SỬA LỖI CÚ PHÁP ĐƠ GAME (g = 0; d = g < 5):
+                    for (let g = 0; g < 5; g++) {
+                        const gx = Math.cos(g * 1.2) * s * 0.5;
+                        const gy = Math.sin(g * 1.2) * s * 0.4;
+                        ctx.beginPath();
+                        ctx.moveTo(gx, gy);
+                        ctx.lineTo(gx - 10, gy - 20); 
+                        ctx.lineTo(gx + 12, gy);
+                        ctx.closePath();
+                        ctx.fill();
+                        ctx.stroke();
+                    }
+
+                    ctx.fillStyle = '#0f172a';
+                    ctx.beginPath();
+                    ctx.ellipse(s * 0.95, -s * 0.1, s * 0.38, s * 0.25, -Math.PI / 10, 0, Math.PI * 2);
+                    ctx.fill();
+
+                    ctx.fillStyle = '#22c55e'; 
+                    ctx.shadowColor = '#22c55e';
+                    ctx.shadowBlur = 8;
+                    ctx.beginPath();
+                    ctx.arc(s * 1.1, -s * 0.12, 5.5, 0, Math.PI * 2);
+                    ctx.fill();
+
+                    ctx.save();
+                    ctx.strokeStyle = '#3b0764'; 
+                    ctx.lineWidth = 8;
+                    ctx.beginPath();
+                    ctx.moveTo(-s * 0.8, 0);
+                    ctx.bezierCurveTo(-s * 0.2, -s * 0.95, s * 0.2, -s * 0.95, s * 0.5, -s * 0.3);
+                    ctx.stroke();
+
+                    ctx.translate(s * 0.38, -s * 0.85 + Math.sin(this.tailAngle * 0.8) * 8);
+                    ctx.rotate(Math.PI / 5 + Math.sin(this.tailAngle * 0.5) * 0.15);
+                    ctx.fillStyle = '#0f172a';
+                    ctx.beginPath();
+                    ctx.ellipse(0, 0, 22, 14, 0, 0, Math.PI * 2);
+                    ctx.fill();
+
+                    ctx.fillStyle = '#ef4444';
+                    ctx.beginPath();
+                    ctx.arc(6, -4, 3, 0, Math.PI * 2);
+                    ctx.fill();
+
+                    ctx.strokeStyle = '#dc2626';
+                    ctx.lineWidth = 1.5;
+                    ctx.beginPath();
+                    ctx.moveTo(18, 0);
+                    ctx.lineTo(26, -3);
+                    ctx.moveTo(18, 0);
+                    ctx.lineTo(26, 3);
+                    ctx.stroke();
+                    ctx.restore();
+
+                // 🦅 STREAMING_CHUNK: Drawing Chu Tuoc the Vermilion Bird...
+                } else if (this.type === 'chutuoc') {
+                    ctx.shadowColor = '#f97316';
+                    ctx.shadowBlur = 18;
+
+                    ctx.strokeStyle = '#dc2626'; 
+                    ctx.lineWidth = 4.5;
+                    for (let t = 0; t < 3; t++) {
+                        ctx.beginPath();
+                        ctx.moveTo(-s * 0.1, -s * 0.1 + t * s * 0.1);
+                        const tWiggle = Math.sin(this.tailAngle * 1.5 + t) * 14;
+                        ctx.bezierCurveTo(-s * 0.8, -s * 0.6 + tWiggle, -s * 1.6, s * 0.6 - tWiggle, -s * 2.3, tWiggle);
+                        ctx.stroke();
+                        
+                        ctx.fillStyle = '#facc15'; 
+                        ctx.beginPath();
+                        ctx.arc(-s * 2.3, tWiggle, 6.5, 0, Math.PI * 2);
+                        ctx.fill();
+                        ctx.fillStyle = '#020617'; 
+                        ctx.beginPath();
+                        ctx.arc(-s * 2.3, tWiggle, 2.5, 0, Math.PI * 2);
+                        ctx.fill();
+                    }
+
+                    const wingWiggle = Math.sin(this.tailAngle) * s * 0.55;
+                    const wingGrad = ctx.createLinearGradient(0, -s, 0, 0);
+                    wingGrad.addColorStop(0, '#f97316');
+                    wingGrad.addColorStop(0.6, '#ef4444');
+                    wingGrad.addColorStop(1, '#4c0519'); 
+                    
+                    ctx.fillStyle = wingGrad;
+                    ctx.beginPath();
+                    ctx.moveTo(-s * 0.3, -s * 0.1);
+                    ctx.lineTo(-s * 0.8, -s * 1.3 + wingWiggle); 
+                    ctx.lineTo(-s * 0.1, -s * 0.7 + wingWiggle);
+                    ctx.lineTo(s * 0.5, -s * 1.4 + wingWiggle);  
+                    ctx.lineTo(s * 0.2, -s * 0.1);
+                    ctx.closePath();
+                    ctx.fill();
+
+                    ctx.beginPath();
+                    ctx.moveTo(-s * 0.3, s * 0.1);
+                    ctx.lineTo(-s * 0.8, s * 1.3 - wingWiggle);
+                    ctx.lineTo(-s * 0.1, s * 0.7 - wingWiggle);
+                    ctx.lineTo(s * 0.5, s * 1.4 - wingWiggle);
+                    ctx.lineTo(s * 0.2, s * 0.1);
+                    ctx.closePath();
+                    ctx.fill();
+
+                    const fireGrad = ctx.createRadialGradient(s * 0.2, -s * 0.1, s * 0.1, 0, 0, s * 0.95);
+                    fireGrad.addColorStop(0, '#fef08a'); 
+                    fireGrad.addColorStop(0.3, '#f97316'); 
+                    fireGrad.addColorStop(0.7, '#be123c'); 
+                    fireGrad.addColorStop(1, '#020617');   
+                    ctx.fillStyle = fireGrad;
+                    ctx.beginPath();
+                    ctx.ellipse(0, 0, s * 0.92, s * 0.55, 0, 0, Math.PI * 2);
+                    ctx.fill();
+
+                    ctx.fillStyle = '#9f1239'; 
+                    ctx.beginPath();
+                    ctx.ellipse(s * 0.82, -s * 0.12, s * 0.32, s * 0.3, 0, 0, Math.PI * 2);
+                    ctx.fill();
+
+                    ctx.fillStyle = '#f97316';
+                    ctx.beginPath();
+                    ctx.moveTo(s * 0.8, -s * 0.4);
+                    ctx.lineTo(s * 0.6, -s * 0.68);
+                    ctx.lineTo(s * 0.92, -s * 0.48);
+                    ctx.lineTo(s * 0.95, -s * 0.75); 
+                    ctx.lineTo(s * 1.05, -s * 0.4);
+                    ctx.closePath();
+                    ctx.fill();
+
+                    ctx.fillStyle = '#0f172a'; 
+                    ctx.beginPath();
+                    ctx.moveTo(s * 1.05, -s * 0.2);
+                    ctx.quadraticCurveTo(s * 1.48, -s * 0.18, s * 1.55, s * 0.1); 
+                    ctx.lineTo(s * 1.25, s * 0.18);
+                    ctx.quadraticCurveTo(s * 1.05, 0, s * 0.98, s * 0.08);
+                    ctx.closePath();
+                    ctx.fill();
+
+                    ctx.fillStyle = '#ef4444'; 
+                    ctx.beginPath();
+                    ctx.arc(s * 0.92, -s * 0.16, s * 0.1, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.fillStyle = '#facc15'; 
+                    ctx.beginPath();
+                    ctx.ellipse(s * 0.95, -s * 0.16, s * 0.03, s * 0.09, 0, 0, Math.PI * 2);
+                    ctx.fill();
+
+                // 🐟 STREAMING_CHUNK: Drawing normal fish and other marine creatures...
+                } else {
+                    const tailGrad = ctx.createLinearGradient(-s * 1.5, 0, -s, 0);
+                    if (this.type === 'trout') {
+                        tailGrad.addColorStop(0, '#f43f5e');
+                        tailGrad.addColorStop(1, '#64748b');
+                    } else if (this.type === 'bass') {
+                        tailGrad.addColorStop(0, '#eab308');
+                        tailGrad.addColorStop(1, '#3f6212');
+                    } else {
+                        tailGrad.addColorStop(0, '#f97316');
+                        tailGrad.addColorStop(1, '#eab308');
+                    }
+
+                    const bodyGrad = ctx.createLinearGradient(-s, 0, s, 0);
+                    if (this.type === 'trout') {
+                        bodyGrad.addColorStop(0, '#475569');
+                        bodyGrad.addColorStop(0.4, '#334155');
+                        bodyGrad.addColorStop(0.7, '#cbd5e1');
+                        bodyGrad.addColorStop(1, '#f1f5f9');
+                    } else if (this.type === 'bass') {
+                        bodyGrad.addColorStop(0, '#166534');
+                        bodyGrad.addColorStop(0.5, '#4ade80');
+                        bodyGrad.addColorStop(0.8, '#fef08a');
+                        bodyGrad.addColorStop(1, '#fef9c3');
+                    } else {
+                        bodyGrad.addColorStop(0, '#ea580c');
+                        bodyGrad.addColorStop(0.5, '#f97316');
+                        bodyGrad.addColorStop(0.8, '#fde047');
+                        bodyGrad.addColorStop(1, '#fff');
+                    }
+
+                    ctx.fillStyle = tailGrad;
+                    ctx.beginPath();
+                    ctx.moveTo(-s + 2, 0);
+                    ctx.quadraticCurveTo(-s * 1.2, -s * 0.5 + wiggle, -s * 1.4, -s * 0.6 + wiggle);
+                    ctx.lineTo(-s * 1.25, wiggle);
+                    ctx.lineTo(-s * 1.4, s * 0.6 + wiggle);
+                    ctx.quadraticCurveTo(-s * 1.2, s * 0.5 + wiggle, -s + 2, 0);
+                    ctx.closePath();
+                    ctx.fill();
+
+                    ctx.fillStyle = tailGrad;
+                    ctx.beginPath();
+                    ctx.moveTo(-s * 0.4, -s * 0.4);
+                    ctx.quadraticCurveTo(-s * 0.1, -s * 0.9, s * 0.1, -s * 0.35);
+                    ctx.lineTo(-s * 0.1, -s * 0.3);
+                    ctx.closePath();
+                    ctx.fill();
+
+                    ctx.beginPath();
+                    ctx.moveTo(-s * 0.3, s * 0.4);
+                    ctx.quadraticCurveTo(-s * 0.1, s * 0.7, s * 0.1, s * 0.35);
+                    ctx.closePath();
+                    ctx.fill();
+
+                    ctx.fillStyle = bodyGrad;
+                    ctx.beginPath();
+                    ctx.moveTo(-s, 0);
+                    ctx.bezierCurveTo(-s * 0.5, -s * 0.62, s * 0.5, -s * 0.62, s, 0);
+                    ctx.bezierCurveTo(s * 0.5, s * 0.62, -s * 0.5, s * 0.62, -s, 0);
+                    ctx.closePath();
+                    ctx.fill();
+
+                    ctx.strokeStyle = 'rgba(255,255,255,0.2)';
+                    ctx.lineWidth = 1.5;
+                    ctx.beginPath();
+                    ctx.arc(s * 0.45, 0, s * 0.35, -Math.PI / 2.5, Math.PI / 2.5);
+                    ctx.stroke();
+
+                    ctx.fillStyle = '#ffffff';
+                    ctx.beginPath();
+                    ctx.arc(s * 0.65, -s * 0.12, s * 0.1, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.fillStyle = '#0f172a';
+                    ctx.beginPath();
+                    ctx.arc(s * 0.68, -s * 0.12, s * 0.06, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+
+                ctx.restore();
+            }
+        }
+
+        // Hàm vẽ bo tròn bảo mật chống sập trên thiết bị cũ
+        function drawRoundRect(x, y, w, h, r, styleFill, styleStroke) {
+            ctx.beginPath();
+            if (ctx.roundRect) {
+                ctx.roundRect(x, y, w, h, r);
+            } else {
+                ctx.rect(x, y, w, h);
+            }
+            if (styleFill) {
+                ctx.fillStyle = styleFill;
+                ctx.fill();
+            }
+            if (styleStroke) {
+                ctx.strokeStyle = styleStroke;
+                ctx.stroke();
+            }
+        }
+
+        function resize() {
+            width = canvas.width = window.innerWidth || 800;
+            height = canvas.height = window.innerHeight || 600;
+            
+            if (isNaN(mouseX) || mouseX === undefined) {
+                mouseX = width / 2;
+            }
+            
+            sunRays = [];
+            for (let i = 0; i < 8; i++) {
+                sunRays.push(new SunRay());
+            }
+
+            initCorals(); 
+        }
+
+        function startGame() {
+            initAudio();
+            gameActive = true;
+            startScreen.classList.add('opacity-0');
+            setTimeout(() => {
+                startScreen.classList.add('hidden');
+            }, 300);
+            resetGame();
+        }
+
+        function resetGame() {
+            score = 0;
+            caughtCount = 0;
+            tension = 0;
+            scoreElement.innerText = `Điểm: 0`;
+            missionElement.innerText = `Nhiệm vụ: 0/${maxMission} thần thú`;
+            winScreen.classList.add('hidden');
+            fishArray = [];
+            bloodParticles = [];
+            fallingFishes = [];
+            notifications = [];
+            
+            mouseX = width / 2;
+            hook = { x: mouseX, depth: 80, casting: false, returning: false, fishes: [] };
+            initAudio();
+        }
+
+        function showWinScreen() {
+            finalScoreElement.innerText = score;
+            winScreen.classList.remove('hidden');
+        }
+
+        function handleCastAction() {
+            if (!gameActive || caughtCount >= maxMission) return;
+            if (!hook.casting && !hook.returning) {
+                hook.casting = true;
+            }
+        }
+
+        function triggerSnap() {
+            playSnapSound();
+            const activeHook = hook;
+            
+            const primaryBeast = activeHook.fishes[0] ? activeHook.fishes[0].type : 'chutuoc';
+            spawnMythicExplosion(activeHook.x, activeHook.depth, primaryBeast, 2.5);
+
+            for (let i = 0; i < 20; i++) {
+                bubbles.push(new Bubble(
+                    activeHook.x + (Math.random() * 40 - 20),
+                    activeHook.depth + (Math.random() * 40 - 20),
+                    true
+                ));
+            }
+
+            notifications.push({
+                text: "ĐỨT DÂY! 💥",
+                x: activeHook.x,
+                y: activeHook.depth - 30,
+                alpha: 1,
+                scale: 1
+            });
+
+            let fyAccumulator = activeHook.depth + 20;
+            activeHook.fishes.forEach((f) => {
+                fallingFishes.push({
+                    fish: f,
+                    x: activeHook.x,
+                    y: fyAccumulator,
+                    vx: (Math.random() - 0.5) * 8, 
+                    vy: Math.random() * 3 - 2, 
+                    angle: -Math.PI / 2, 
+                    va: (Math.random() - 0.5) * 0.25 
+                });
+                fyAccumulator += f.size * 1.8;
+            });
+
+            activeHook.fishes = [];
+            activeHook.returning = true; 
+            tension = 0;
+        }
+
+        function animate() {
+            ctx.clearRect(0, 0, width, height);
+
+            sunRays.forEach(ray => {
+                ray.update();
+                ray.draw();
+            });
+
+            drawCorals();
+
+            if (Math.random() < 0.1) bubbles.push(new Bubble());
+            
+            for (let i = bubbles.length - 1; i >= 0; i--) {
+                const b = bubbles[i];
+                b.update();
+                b.draw();
+                if (b.y < -10) bubbles.splice(i, 1);
+            }
+
+            for (let i = bloodParticles.length - 1; i >= 0; i--) {
+                const p = bloodParticles[i];
+                p.update();
+                p.draw();
+                if (p.alpha <= 0) bloodParticles.splice(i, 1);
+            }
+
+            for (let i = fallingFishes.length - 1; i >= 0; i--) {
+                const ff = fallingFishes[i];
+                ff.vy += 0.35; 
+                ff.y += ff.vy;
+                ff.x += ff.vx;
+                ff.angle += ff.va; 
+                
+                ctx.save();
+                ctx.translate(ff.x, ff.y);
+                ctx.rotate(ff.angle);
+                ff.fish.draw(0, 0, 0); 
+                ctx.restore();
+
+                if (Math.random() < 0.3) {
+                    spawnMythicExplosion(ff.x, ff.y, ff.fish.type, 0.2);
+                }
+
+                if (ff.y > height + 100) {
+                    fallingFishes.splice(i, 1);
+                }
+            }
+
+            for (let i = notifications.length - 1; i >= 0; i--) {
+                const n = notifications[i];
+                n.y -= 1.2;
+                n.alpha -= 0.015;
+                n.scale += 0.005;
+                ctx.save();
+                ctx.globalAlpha = n.alpha;
+                ctx.fillStyle = '#ef4444';
+                ctx.shadowColor = 'black';
+                ctx.shadowBlur = 10;
+                ctx.font = 'extrabold 32px "Inter", sans-serif';
+                ctx.textAlign = 'center';
+                ctx.translate(n.x, n.y);
+                ctx.scale(n.scale, n.scale);
+                ctx.fillText(n.text, 0, 0);
+                ctx.restore();
+
+                if (n.alpha <= 0) {
+                    notifications.splice(i, 1);
+                }
+            }
+
+            if (gameActive) {
+                if (!hook.casting && !hook.returning && caughtCount < maxMission) {
+                    if (!isNaN(mouseX) && mouseX !== undefined) {
+                        hook.x = mouseX;
+                    }
+                }
+
+                if (hook.casting && caughtCount < maxMission) {
+                    hook.depth += 14; 
+                    if (hook.depth > height - 100) { hook.casting = false; hook.returning = true; }
+                } else if (hook.returning) {
+                    
+                    if (hook.fishes.length > 0) {
+                        if (isPressing) {
+                            const dragForce = hook.fishes.length * 2.2;
+                            const retractSpeed = Math.max(2.5, 11 - dragForce); 
+                            hook.depth -= retractSpeed;
+                            
+                            let hardMultiplier = isHardMode ? 2.5 : 1.0;
+                            
+                            let weightFactor = 1.0;
+                            hook.fishes.forEach(f => {
+                                if (f.type === 'huyenvu') weightFactor += 1.8; 
+                                else if (f.type === 'thanhlong') weightFactor += 1.5; 
+                                else if (f.type === 'chutuoc' || f.type === 'bachho') weightFactor += 1.2;
+                            });
+
+                            tension += (0.65 + hook.fishes.length * 0.4) * hardMultiplier * weightFactor;
+                        } else {
+                            let weightSink = 0.5;
+                            hook.fishes.forEach(f => {
+                                if (f.type === 'huyenvu') weightSink += 1.2;
+                            });
+                            hook.depth += weightSink * hook.fishes.length;
+
+                            let releaseFactor = isHardMode ? 1.4 : 2.0;
+                            tension -= releaseFactor;
+                        }
+
+                        tension = Math.max(0, Math.min(100, tension));
+
+                        if (tension >= 100) {
+                            triggerSnap();
+                        }
+
+                    } else {
+                        hook.depth -= 12; 
+                    }
+
+                    if (hook.depth <= 80) {
+                        if (hook.fishes.length > 0) {
+                            let addedPoints = 0;
+                            hook.fishes.forEach(f => {
+                                addedPoints += f.points;
+                                caughtCount++;
+                            });
+                            
+                            score += addedPoints;
+                            scoreElement.innerText = `Điểm: ${score}`;
+                            missionElement.innerText = `Nhiệm vụ: ${Math.min(caughtCount, maxMission)}/${maxMission} thần thú`;
+                            
+                            playSuccessSound(hook.fishes.length);
+
+                            if (caughtCount >= maxMission) {
+                                showWinScreen();
+                            }
+                        }
+                        hook.returning = false; 
+                        hook.fishes = []; 
+                        tension = 0;
+                    }
+                }
+
+                if (hook.fishes.length > 0) {
+                    hook.fishes.forEach(f => {
+                        f.tailAngle += f.tailSpeed * (isPressing ? 2.8 : 1.4); 
+                    });
+                }
+            }
+
+            ctx.strokeStyle = isHardMode ? 'rgba(239, 68, 68, 0.65)' : 'rgba(255, 255, 255, 0.45)'; 
+            ctx.lineWidth = 1.5;
+            ctx.beginPath();
+            ctx.moveTo(hook.x, 0);
+            if (hook.fishes.length > 0 && hook.returning) {
+                const segments = 25;
+                const freq = Date.now() * 0.18; 
+                const amp = Math.sin(Date.now() * 0.1) * (1.8 + (tension / 20) * hook.fishes.length); 
+                for (let i = 0; i <= segments; i++) {
+                    const ratio = i / segments;
+                    const ly = hook.depth * ratio;
+                    const lx = hook.x + Math.sin(ly * 0.08 - freq) * amp * Math.sin(ratio * Math.PI);
+                    ctx.lineTo(lx, ly);
+                }
+            } else {
+                ctx.lineTo(hook.x, hook.depth);
+            }
+            ctx.stroke();
+
+            ctx.save();
+            ctx.translate(hook.x, hook.depth);
+
+            ctx.strokeStyle = isHardMode ? '#1e1b4b' : '#94a3b8'; 
+            ctx.lineWidth = 3.5;
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+            ctx.beginPath();
+            ctx.moveTo(0, 0);
+            ctx.bezierCurveTo(15, 5, 12, 22, 0, 20);
+            ctx.lineTo(-6, 12); 
+            ctx.stroke();
+
+            ctx.beginPath();
+            ctx.moveTo(0, 20);
+            ctx.lineTo(-3, 17);
+            ctx.stroke();
+
+            if (hook.fishes.length === 0) {
+                ctx.save();
+                ctx.strokeStyle = '#dc2626'; 
+                ctx.lineWidth = 5;
+                ctx.lineCap = 'round';
+                ctx.lineJoin = 'round';
+                ctx.beginPath();
+
+                const wiggle = Math.sin(Date.now() / 120) * 4;
+                ctx.moveTo(0, -3);
+                ctx.quadraticCurveTo(-5 + wiggle, 5, 0, 9);
+                ctx.quadraticCurveTo(5 - wiggle, 13, 0, 17);
+                ctx.quadraticCurveTo(-6 + wiggle, 20, -10 + wiggle, 23);
+                ctx.stroke();
+
+                ctx.strokeStyle = '#dc2626'; 
+                ctx.lineWidth = 1.5;
+                for (let t = 0; t < 4; t++) {
+                    const rx = (t < 2) ? (-2 + wiggle * 0.4) : (2 - wiggle * 0.4);
+                    const ry = t * 6;
+                    ctx.beginPath();
+                    ctx.arc(rx, ry, 2.5, 0, Math.PI * 2);
+                    ctx.stroke();
+                }
+                ctx.restore();
+            }
+
+            ctx.restore();
+
+            if (hook.fishes.length > 0 && hook.returning) {
+                const barX = hook.x + 65;
+                const barY = hook.depth - 40;
+                const barW = 10;
+                const barH = 80;
+
+                const borderStroke = tension > 80 && Math.sin(Date.now() / 60) > 0 ? '#ef4444' : 'rgba(255, 255, 255, 0.35)';
+                drawRoundRect(barX - 3, barY - 3, barW + 6, barH + 6, 6, 'rgba(15, 23, 42, 0.8)', borderStroke);
+
+                const grad = ctx.createLinearGradient(barX, barY + barH, barX, barY);
+                grad.addColorStop(0, '#22c55e');   
+                grad.addColorStop(0.6, '#f97316'); 
+                grad.addColorStop(1, '#ef4444');    
+
+                const fillH = (tension / 100) * barH;
+                drawRoundRect(barX, barY + barH - fillH, barW, fillH, 3, grad, null);
+
+                ctx.fillStyle = tension > 80 && Math.sin(Date.now() / 40) > 0 ? '#ef4444' : '#fca5a5';
+                ctx.font = 'extrabold 10px "Inter", sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText(tension > 80 ? "SẮP ĐỨT!!!" : "CĂNG", barX + barW / 2, barY - 8);
+            }
+
+            if (hook.returning && hook.fishes.length > 0) {
+                let fyAccumulator = hook.depth + 20;
+                hook.fishes.forEach((f) => {
+                    const fy = fyAccumulator;
+                    fyAccumulator += f.size * 1.8;
+
+                    if (Math.random() < 0.45) { 
+                        spawnMythicExplosion(hook.x + (Math.random() * 12 - 6), fy, f.type, 0.12);
+                    }
+
+                    const bubbleChance = isPressing ? 0.75 : 0.4;
+                    if (Math.random() < bubbleChance) {
+                        bubbles.push(new Bubble(
+                            hook.x + (Math.random() * 26 - 13),
+                            fy + (Math.random() * 20 - 10),
+                            true 
+                        ));
+                    }
+                });
+            }
+
+            if (hook.fishes.length > 0) {
+                let currentY = hook.depth + 20; 
+                hook.fishes.forEach((f, idx) => {
+                    f.draw(hook.x, currentY, idx);
+                    currentY += f.size * 1.8; 
+                });
+            }
+
+            const spawnChance = isHardMode ? 0.038 : 0.045;
+            if (Math.random() < spawnChance && caughtCount < maxMission && fishArray.length < 12) {
+                fishArray.push(new Fish());
+            }
+
+            for (let i = fishArray.length - 1; i >= 0; i--) {
+                const f = fishArray[i];
+                f.update(); 
+                f.draw();
+                
+                let caughtByAny = false;
+                if (gameActive && (hook.casting || hook.returning) && caughtCount < maxMission) {
+                    let targetY = hook.depth + 20;
+                    hook.fishes.forEach(caughtFish => {
+                        targetY += caughtFish.size * 1.8;
+                    });
+
+                    if (Math.abs(f.x - hook.x) < 45 && Math.abs(f.y - targetY) < 30) {
+                        if (hook.fishes.length < 3) {
+                            hook.fishes.push(f);
+                            fishArray.splice(i, 1);
+                            
+                            if (hook.fishes.length === 1) {
+                                tension = 0;
+                            }
+                            
+                            spawnMythicExplosion(hook.x, targetY, f.type, 1.3);
+                            playBiteSound();
+
+                            if (hook.fishes.length === 3) {
+                                hook.casting = false;
+                                hook.returning = true;
+                            }
+                            caughtByAny = true;
+                        }
+                    }
+                }
+                
+                if (!caughtByAny && (f.x < -200 || f.x > width + 200)) fishArray.splice(i, 1);
+            }
+
+            requestAnimationFrame(animate);
+        }
+
+        window.addEventListener('mousemove', (e) => {
+            if (gameActive) mouseX = e.clientX;
+        });
+
+        window.addEventListener('mousedown', (e) => { 
+            if (e.target.id === 'global-exit-btn' || e.target.closest('#global-exit-btn')) return;
+            if (gameActive) {
+                isPressing = true;
+                handleCastAction();
+            }
+        });
+
+        window.addEventListener('mouseup', () => { 
+            isPressing = false;
+        });
+
+        window.addEventListener('mouseleave', () => { 
+            isPressing = false; 
+        });
+
+        const keysPressed = {};
+        window.addEventListener('keydown', (e) => {
+            keysPressed[e.code] = true;
+            if (e.code === 'Space') {
+                e.preventDefault(); 
+                if (gameActive) {
+                    isPressing = true;
+                    handleCastAction();
+                }
+            }
+        });
+
+        window.addEventListener('keyup', (e) => {
+            keysPressed[e.code] = false;
+            if (e.code === 'Space') {
+                isPressing = false;
+            }
+        });
+
+        window.addEventListener('touchmove', (e) => {
+            if (gameActive && e.touches.length > 0) {
+                mouseX = e.touches[0].clientX;
+            }
+        }, { passive: true });
+
+        window.addEventListener('touchstart', (e) => {
+            if (e.target.id === 'global-exit-btn' || e.target.closest('#global-exit-btn')) return;
+            if (gameActive) {
+                isPressing = true;
+                if (e.touches.length > 0) {
+                    mouseX = e.touches[0].clientX;
+                }
+                handleCastAction();
+            }
+        }, { passive: true });
+
+        window.addEventListener('touchend', () => {
+            isPressing = false;
+        });
+
+        window.addEventListener('touchcancel', () => {
+            isPressing = false;
+        });
+
+        window.addEventListener('resize', resize);
+
+        resize();
+        score = 0;
+        selectMode(true); 
+        animate();
+    </script>
+    <a href="index.html" id="global-exit-btn" style="
+        position: fixed;
+        top: 15px;
+        left: 15px;
+        z-index: 99999;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 10px 20px;
+        background: rgba(15, 23, 42, 0.6);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        border: 1px solid rgba(255, 255, 255, 0.15);
+        border-radius: 12px;
+        color: #f3f4f6;
+        text-decoration: none;
+        font-family: 'Outfit', 'Segoe UI', sans-serif;
+        font-size: 14px;
+        font-weight: 600;
+        letter-spacing: 0.5px;
+        box-shadow: 0 4px 30px rgba(0, 0, 0, 0.3);
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        cursor: pointer;
+    ">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="transition: transform 0.3s ease;">
+            <path d="M19 12H5M12 19l-7-7 7-7"/>
+        </svg>
+        Thoát
+    </a>
+
+    <script>
+        document.getElementById('global-exit-btn').addEventListener('click', function(e) {
+            e.preventDefault();
+            this.style.transform = 'scale(0.95)';
+            setTimeout(() => {
+                if (gameActive) {
+                    gameActive = false;
+                    const startScreen = document.getElementById('start-screen');
+                    startScreen.classList.remove('hidden');
+                    startScreen.classList.remove('opacity-0');
+                    const winScreen = document.getElementById('win-screen');
+                    if (winScreen) winScreen.classList.add('hidden');
+                    this.style.transform = 'scale(1)';
+                } else {
+                    if (window.opener && window.history.length === 1) {
+                        window.close();
+                    } else {
+                        window.location.href = 'index.html';
+                    }
+                }
+            }, 150);
+        });
+
+        const exitBtn = document.getElementById('global-exit-btn');
+        exitBtn.addEventListener('mouseenter', function() {
+            this.style.background = 'rgba(99, 102, 241, 0.3)';
+            this.style.borderColor = 'rgba(99, 102, 241, 0.6)';
+            this.style.boxShadow = '0 0 15px rgba(99, 102, 241, 0.4)';
+            this.querySelector('svg').style.transform = 'translateX(-3px)';
+        });
+        exitBtn.addEventListener('mouseleave', function() {
+            this.style.background = 'rgba(15, 23, 42, 0.6)';
+            this.style.borderColor = 'rgba(255, 255, 255, 0.15)';
+            this.style.boxShadow = '0 4px 30px rgba(0, 0, 0, 0.3)';
+            this.querySelector('svg').style.transform = 'translateX(0)';
+        });
+    </script>
+</body>
+</html>

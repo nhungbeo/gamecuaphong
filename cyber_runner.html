@@ -1,0 +1,1481 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cyber Runner 3D - Synthwave Infinite Runner</title>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            user-select: none;
+        }
+        body, html {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background-color: #030308;
+            font-family: 'Orbitron', sans-serif;
+            color: #fff;
+        }
+        #game-container {
+            position: relative;
+            width: 100%;
+            height: 100%;
+        }
+        #three-canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+        }
+        #two-canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 2;
+            pointer-events: none;
+        }
+        #ui-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 3;
+            pointer-events: none;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 30px;
+        }
+        .hud-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            width: 100%;
+        }
+        .stats-panel {
+            background: rgba(5, 5, 20, 0.75);
+            border: 1px solid rgba(0, 240, 255, 0.25);
+            border-radius: 10px;
+            padding: 15px 25px;
+            backdrop-filter: blur(5px);
+            box-shadow: 0 4px 20px rgba(0,0,0,0.6);
+        }
+        .distance-text {
+            font-size: 28px;
+            font-weight: 900;
+            color: #00f0ff;
+            text-shadow: 0 0 15px rgba(0, 240, 255, 0.6);
+        }
+        .speed-text {
+            font-size: 13px;
+            color: #ffaa00;
+            margin-top: 5px;
+            letter-spacing: 1px;
+            font-weight: 700;
+        }
+        .crystal-text {
+            font-size: 28px;
+            font-weight: 900;
+            color: #00ff66;
+            text-shadow: 0 0 15px rgba(0, 255, 102, 0.6);
+            text-align: right;
+        }
+        .multiplier-text {
+            font-size: 13px;
+            color: #ff0055;
+            margin-top: 5px;
+            text-align: right;
+            font-weight: 700;
+        }
+        .controls-panel {
+            background: rgba(5, 5, 20, 0.75);
+            border: 1px solid rgba(0, 240, 255, 0.2);
+            border-radius: 8px;
+            padding: 15px;
+            width: fit-content;
+            pointer-events: auto;
+            backdrop-filter: blur(5px);
+        }
+        .controls-panel h3 {
+            color: #00f0ff;
+            font-size: 12px;
+            margin-bottom: 8px;
+            letter-spacing: 1px;
+            border-bottom: 1px solid rgba(0,240,255,0.2);
+            padding-bottom: 4px;
+        }
+        .control-row {
+            font-size: 10px;
+            color: #aaa;
+            margin-bottom: 4px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .key {
+            background: #222;
+            color: #fff;
+            padding: 2px 6px;
+            border-radius: 4px;
+            border: 1px solid #444;
+            font-weight: bold;
+        }
+        #game-message {
+            position: absolute;
+            top: 40%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 75px;
+            font-weight: 900;
+            text-transform: uppercase;
+            letter-spacing: 6px;
+            opacity: 0;
+            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            text-shadow: 0 0 30px rgba(0, 240, 255, 0.8);
+            z-index: 4;
+            pointer-events: none;
+        }
+        #game-message.show {
+            opacity: 1;
+        }
+        #game-over-screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(5, 5, 15, 0.9);
+            backdrop-filter: blur(10px);
+            z-index: 10;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.5s ease;
+        }
+        #game-over-screen.show {
+            opacity: 1;
+            pointer-events: auto;
+        }
+        #game-over-screen h2 {
+            font-size: 60px;
+            font-weight: 900;
+            color: #ff0055;
+            text-shadow: 0 0 35px rgba(255, 0, 85, 0.7);
+            margin-bottom: 20px;
+            letter-spacing: 2px;
+        }
+        .btn-restart {
+            background: transparent;
+            border: 2px solid #00f0ff;
+            color: #00f0ff;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 18px;
+            font-weight: 900;
+            padding: 12px 35px;
+            cursor: pointer;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            border-radius: 4px;
+            transition: all 0.2s ease;
+            box-shadow: 0 0 15px rgba(0, 240, 255, 0.2);
+            margin-top: 30px;
+        }
+        .btn-restart:hover {
+            background: #00f0ff;
+            color: #000;
+            box-shadow: 0 0 35px rgba(0, 240, 255, 0.8);
+            transform: scale(1.05);
+        }
+
+        /* --- CSS MỚI CHO CHẾ ĐỘ SOLO --- */
+        #mode-select-screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle at center, #0a0a18 0%, #030308 100%);
+            z-index: 20;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            font-family: 'Orbitron', sans-serif;
+        }
+        #mode-select-screen h1 {
+            font-size: 55px;
+            font-weight: 900;
+            background: linear-gradient(to right, #00f0ff, #ff0055);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-shadow: 0 0 30px rgba(0, 240, 255, 0.3);
+            margin-bottom: 40px;
+            letter-spacing: 4px;
+        }
+        .mode-btn {
+            background: rgba(15, 23, 42, 0.6);
+            border: 2px solid rgba(0, 240, 255, 0.3);
+            color: #fff;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 18px;
+            font-weight: 700;
+            padding: 15px 40px;
+            margin: 10px;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            width: 300px;
+            letter-spacing: 1.5px;
+            backdrop-filter: blur(5px);
+        }
+        .mode-btn:hover {
+            background: #00f0ff;
+            color: #000;
+            border-color: #00f0ff;
+            box-shadow: 0 0 25px rgba(0, 240, 255, 0.6);
+            transform: scale(1.05);
+        }
+        .mode-btn.solo-btn {
+            border-color: rgba(255, 0, 85, 0.3);
+        }
+        .mode-btn.solo-btn:hover {
+            background: #ff0055;
+            color: #fff;
+            border-color: #ff0055;
+            box-shadow: 0 0 25px rgba(255, 0, 85, 0.6);
+        }
+        
+        /* Split overlay khi solo */
+        .split-result-overlay {
+            position: absolute;
+            top: 0;
+            height: 100%;
+            width: 50%;
+            z-index: 9;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            pointer-events: none;
+            transition: background 0.5s ease;
+        }
+        #p1-split-overlay {
+            left: 0;
+            border-right: 1px dashed rgba(255, 255, 255, 0.2);
+        }
+        #p2-split-overlay {
+            left: 50%;
+        }
+        .result-text {
+            font-size: 50px;
+            font-weight: 900;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            text-shadow: 0 0 20px rgba(0,0,0,0.8);
+            opacity: 0;
+            transform: scale(0.8);
+            transition: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        .result-text.show {
+            opacity: 1;
+            transform: scale(1);
+        }
+        .result-win {
+            color: #00ff66;
+            text-shadow: 0 0 25px rgba(0, 255, 102, 0.6);
+        }
+        .result-lose {
+            color: #ff0055;
+            text-shadow: 0 0 25px rgba(255, 0, 85, 0.6);
+        }
+        .solo-hud-header {
+            display: none;
+            justify-content: space-between;
+            width: 100%;
+            position: absolute;
+            top: 30px;
+            padding: 0 40px;
+            z-index: 5;
+            pointer-events: none;
+        }
+    </style>
+</head>
+<body>
+    <div id="game-container">
+        <!-- Lobby chọn chế độ chơi -->
+        <div id="mode-select-screen">
+            <h1>CYBER RUNNER 3D</h1>
+            <button class="mode-btn" onclick="selectPlayMode('single')">CHƠI ĐƠN</button>
+            <button class="mode-btn solo-btn" onclick="selectPlayMode('solo')">CHƠI SOLO (2P)</button>
+        </div>
+
+        <canvas id="three-canvas"></canvas>
+        <div id="two-canvas"></div>
+
+        <!-- Split screen result overlay cho Solo -->
+        <div id="p1-split-overlay" class="split-result-overlay">
+            <div id="p1-result-text" class="result-text"></div>
+        </div>
+        <div id="p2-split-overlay" class="split-result-overlay">
+            <div id="p2-result-text" class="result-text"></div>
+        </div>
+
+        <!-- HUD chơi đơn mặc định -->
+        <div id="ui-overlay">
+            <div class="hud-header" id="single-hud">
+                <!-- Distance and speed -->
+                <div class="stats-panel">
+                    <div class="distance-text" id="distance-text">0000 m</div>
+                    <div class="speed-text" id="speed-text">VẬN TỐC: 100 KM/H</div>
+                </div>
+
+                <!-- Crystals score -->
+                <div class="stats-panel">
+                    <div class="crystal-text" id="crystal-text">00 CRYSTALS</div>
+                    <div style="display: flex; justify-content: space-between; gap: 15px; margin-top: 5px;">
+                        <span class="multiplier-text" id="multiplier-text" style="margin-top: 0;">SPEED: x1.0</span>
+                        <span style="font-size: 11px; color: #ffaa00; font-weight: 700;" id="high-crystal-text">KỶ LỤC: 0</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- HUD đôi khi chơi Solo -->
+            <div class="solo-hud-header" id="solo-hud">
+                <!-- Player 1 stats -->
+                <div class="stats-panel">
+                    <div style="font-size: 10px; color: #00f0ff; font-weight: 900; margin-bottom: 3px;">P1 (A/W/S/D)</div>
+                    <div class="distance-text" id="p1-distance-text" style="font-size: 20px;">0000 m</div>
+                    <div class="crystal-text" id="p1-crystal-text" style="font-size: 16px; text-align: left; color: #00ff66;">00 CRYS</div>
+                </div>
+                <!-- Player 2 stats -->
+                <div class="stats-panel" style="text-align: right;">
+                    <div style="font-size: 10px; color: #ff0055; font-weight: 900; margin-bottom: 3px;">P2 (MŨI TÊN)</div>
+                    <div class="distance-text" id="p2-distance-text" style="font-size: 20px;">0000 m</div>
+                    <div class="crystal-text" id="p2-crystal-text" style="font-size: 16px; color: #00ff66;">00 CRYS</div>
+                </div>
+            </div>
+
+            <!-- Warning Alert Message -->
+            <div id="game-message">CYBER RUN</div>
+
+            <!-- Bottom Panel controls -->
+            <div class="controls-panel" id="controls-info">
+                <h3>BẢNG ĐIỀU KHIỂN</h3>
+                <div id="control-single-desc">
+                    <div class="control-row">Chuyển làn: <span class="key">A</span> / <span class="key">D</span> hoặc <span class="key">←</span> / <span class="key">→</span></div>
+                    <div class="control-row" style="margin-top: 4px;">Nhảy tránh rào thấp: <span class="key">W</span> hoặc <span class="key">↑</span></div>
+                    <div class="control-row" style="margin-top: 4px;">Trượt chui rào cao: <span class="key">S</span> hoặc <span class="key">↓</span></div>
+                </div>
+                <div id="control-solo-desc" style="display: none;">
+                    <div class="control-row"><span style="color: #00f0ff;">P1</span>: <span class="key">A</span>/<span class="key">D</span> rẽ, <span class="key">W</span> nhảy, <span class="key">S</span> trượt</div>
+                    <div class="control-row" style="margin-top: 4px;"><span style="color: #ff0055;">P2</span>: <span class="key">←</span>/<span class="key">→</span> rẽ, <span class="key">↑</span> nhảy, <span class="key">↓</span> trượt</div>
+                </div>
+            </div>
+        </div>
+
+        <div id="game-over-screen">
+            <h2 id="end-screen-title">TẦN SỐ RẠN NỨT!</h2>
+            <div style="font-size: 22px; color: #ccc; margin-bottom: 8px;" id="final-dist-text">QUÃNG ĐƯỜNG: 0 m</div>
+            <div style="font-size: 22px; color: #00ff66; font-weight: 700; margin-bottom: 8px;" id="final-cryst-text">PHA LÊ THU THẬP: 0</div>
+            <div style="font-size: 18px; color: #ffff00; font-weight: 900; display: none;" id="new-record-alert">KỶ LỤC MỚI ĐẠT ĐƯỢC!</div>
+            <button class="btn-restart" onclick="restartGame()">CHƠI LẠI</button>
+        </div>
+    </div>
+
+    <!-- CDN Libraries -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/two.js/0.8.10/two.min.js"></script>
+
+    <script>
+        // --- ÂM THANH GIẢ LẬP QUA WEB AUDIO API ---
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+        function playSynthJump() {
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(200, audioCtx.currentTime);
+            osc.frequency.exponentialRampToValueAtTime(700, audioCtx.currentTime + 0.2);
+            
+            gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.2);
+            
+            osc.start();
+            osc.stop(audioCtx.currentTime + 0.2);
+        }
+
+        function playSynthSlide() {
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+
+            osc.type = 'triangle';
+            osc.frequency.setValueAtTime(100, audioCtx.currentTime);
+            osc.frequency.linearRampToValueAtTime(60, audioCtx.currentTime + 0.35);
+
+            gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.35);
+
+            osc.start();
+            osc.stop(audioCtx.currentTime + 0.35);
+        }
+
+        function playSynthCollect() {
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(587.33, audioCtx.currentTime); // D5
+            osc.frequency.setValueAtTime(880, audioCtx.currentTime + 0.08); // A5
+
+            gain.gain.setValueAtTime(0.12, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.005, audioCtx.currentTime + 0.2);
+
+            osc.start();
+            osc.stop(audioCtx.currentTime + 0.2);
+        }
+
+        function playSynthCrash() {
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+
+            osc.type = 'sawtooth';
+            osc.frequency.setValueAtTime(120, audioCtx.currentTime);
+            osc.frequency.linearRampToValueAtTime(30, audioCtx.currentTime + 0.5);
+
+            gain.gain.setValueAtTime(0.4, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.5);
+
+            osc.start();
+            osc.stop(audioCtx.currentTime + 0.5);
+        }
+
+        // --- CẤU HÌNH TRÒ CHƠI ---
+        const config = {
+            laneWidth: 3.2,
+            playerZ: 3,
+            maxLanes: 3, // -1 (trái), 0 (giữa), 1 (phải)
+            baseSpeed: 0.25,
+            maxSpeed: 0.7,
+            jumpForce: 0.22,
+            gravity: -0.012
+        };
+
+        // Trạng thái chế độ chơi
+        let playMode = 'single'; // 'single' hoặc 'solo'
+        let gameActive = false;  // Game đang chạy thực sự hay không
+
+        // Dữ liệu người chơi
+        let p1 = {
+            id: 1,
+            startX: 0,
+            x: 0,
+            currentLane: 0,
+            targetX: 0,
+            posY: 0.3,
+            velY: 0,
+            isGrounded: true,
+            isSliding: false,
+            slideTimer: 0,
+            distance: 0,
+            crystals: 0,
+            speed: config.baseSpeed,
+            isGameOver: false,
+            ship: null,
+            exhaustLight: null
+        };
+
+        let p2 = {
+            id: 2,
+            startX: 0,
+            x: 0,
+            currentLane: 0,
+            targetX: 0,
+            posY: 0.3,
+            velY: 0,
+            isGrounded: true,
+            isSliding: false,
+            slideTimer: 0,
+            distance: 0,
+            crystals: 0,
+            speed: config.baseSpeed,
+            isGameOver: false,
+            ship: null,
+            exhaustLight: null
+        };
+
+        // --- KHỞI TẠO THREE.JS (3D) ---
+        const canvas = document.getElementById('three-canvas');
+        const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x030308);
+        scene.fog = new THREE.FogExp2(0x030308, 0.012);
+
+        // Tạo 2 camera cho Split-screen
+        const camera1 = new THREE.PerspectiveCamera(60, (window.innerWidth / 2) / window.innerHeight, 0.1, 100);
+        camera1.position.set(0, 3.2, 9);
+        camera1.lookAt(0, 1.2, 0);
+
+        const camera2 = new THREE.PerspectiveCamera(60, (window.innerWidth / 2) / window.innerHeight, 0.1, 100);
+        camera2.position.set(0, 3.2, 9);
+        camera2.lookAt(0, 1.2, 0);
+
+        // Ánh sáng
+        const ambientLight = new THREE.AmbientLight(0x050510, 1.2);
+        scene.add(ambientLight);
+
+        const neonLightCenter = new THREE.PointLight(0x00f0ff, 3, 25);
+        neonLightCenter.position.set(0, 4, 2);
+        scene.add(neonLightCenter);
+
+        const neonLightCenter2 = new THREE.PointLight(0xff0055, 3, 25);
+        neonLightCenter2.position.set(0, 4, 2);
+        scene.add(neonLightCenter2);
+
+        // Bầu trời sao
+        const starsGeo = new THREE.BufferGeometry();
+        const starsCount = 600;
+        const posArray = new Float32Array(starsCount * 3);
+        for (let i = 0; i < starsCount * 3; i += 3) {
+            posArray[i] = (Math.random() - 0.5) * 120;
+            posArray[i+1] = (Math.random() - 0.5) * 40 + 5;
+            posArray[i+2] = -Math.random() * 80 - 10;
+        }
+        starsGeo.setAttribute('position', new THREE.BufferAttribute(posArray, 3));
+        const starfield = new THREE.Points(starsGeo, new THREE.PointsMaterial({
+            size: 0.1,
+            color: 0x00f0ff,
+            transparent: true,
+            opacity: 0.6
+        }));
+        scene.add(starfield);
+
+        // --- HÀM TẠO ĐƯỜNG CHẠY (RUNWAY) ---
+        function createRunway(offsetX, colorHex = 0x00f0ff) {
+            const group = new THREE.Group();
+            
+            const runwayGeo = new THREE.PlaneGeometry(12, 120);
+            const runwayMat = new THREE.MeshStandardMaterial({
+                color: 0x0a0a15,
+                roughness: 0.1,
+                metalness: 0.9
+            });
+            const runwayMesh = new THREE.Mesh(runwayGeo, runwayMat);
+            runwayMesh.rotation.x = -Math.PI / 2;
+            runwayMesh.position.set(0, 0, -40);
+            group.add(runwayMesh);
+
+            const gridHelperMesh = new THREE.GridHelper(120, 60, colorHex, colorHex);
+            gridHelperMesh.position.set(0, 0.01, -40);
+            group.add(gridHelperMesh);
+
+            const laneLineMat = new THREE.MeshBasicMaterial({ color: 0xff0055 });
+            const leftDivider = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.02, 120), laneLineMat);
+            leftDivider.position.set(-1.6, 0.02, -40);
+            group.add(leftDivider);
+
+            const rightDivider = leftDivider.clone();
+            rightDivider.position.x = 1.6;
+            group.add(rightDivider);
+
+            group.position.x = offsetX;
+            scene.add(group);
+
+            return { group, grid: gridHelperMesh };
+        }
+
+        // Tạo các Runway
+        let runwayP1 = null;
+        let runwayP2 = null;
+
+        // Xe bay Hovercraft
+        function createHovercraftMesh(colorHex = 0x00f0ff) {
+            const group = new THREE.Group();
+            const bodyMat = new THREE.MeshStandardMaterial({
+                color: 0x151522,
+                roughness: 0.2,
+                metalness: 0.8
+            });
+            const glowMat = new THREE.MeshStandardMaterial({
+                color: colorHex,
+                emissive: colorHex,
+                emissiveIntensity: 0.6
+            });
+
+            const noseGeo = new THREE.ConeGeometry(0.4, 1.4, 4);
+            const nose = new THREE.Mesh(noseGeo, bodyMat);
+            nose.rotation.x = Math.PI / 2;
+            nose.scale.set(1.2, 1, 0.4);
+            group.add(nose);
+
+            const wingGeo = new THREE.BoxGeometry(1.3, 0.08, 0.6);
+            const wings = new THREE.Mesh(wingGeo, bodyMat);
+            wings.position.set(0, -0.05, 0.2);
+            group.add(wings);
+
+            const neonLeft = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.1, 0.7), glowMat);
+            neonLeft.position.set(-0.7, -0.05, 0.2);
+            group.add(neonLeft);
+
+            const neonRight = neonLeft.clone();
+            neonRight.position.x = 0.7;
+            group.add(neonRight);
+
+            const engineGeo = new THREE.CylinderGeometry(0.18, 0.1, 0.3, 8);
+            const engine = new THREE.Mesh(engineGeo, bodyMat);
+            engine.rotation.x = Math.PI / 2;
+            engine.position.set(0, -0.05, 0.75);
+            group.add(engine);
+
+            return group;
+        }
+
+        // Hai người chơi ban đầu
+        p1.ship = createHovercraftMesh(0x00f0ff);
+        p2.ship = createHovercraftMesh(0xff0055);
+
+        p1.exhaustLight = new THREE.PointLight(0x00f0ff, 3, 5);
+        p2.exhaustLight = new THREE.PointLight(0xff0055, 3, 5);
+
+        // Đồng hồ tốc độ Vector Two.js
+        const twoContainer = document.getElementById('two-canvas');
+        const two = new Two({ fullscreen: true, autostart: true }).appendTo(twoContainer);
+
+        const speedCenter = { x: 120, y: window.innerHeight - 80 };
+        const speedArcBg = two.makeArcSegment(speedCenter.x, speedCenter.y, 45, 45, -Math.PI, 0);
+        speedArcBg.fill = 'transparent';
+        speedArcBg.stroke = 'rgba(255,255,255,0.1)';
+        speedArcBg.linewidth = 8;
+        speedArcBg.cap = 'round';
+
+        const speedArcFill = two.makeArcSegment(speedCenter.x, speedCenter.y, 45, 45, -Math.PI, -Math.PI);
+        speedArcFill.fill = 'transparent';
+        speedArcFill.stroke = '#ffaa00';
+        speedArcFill.linewidth = 8;
+        speedArcFill.cap = 'round';
+
+        const speedTextNode = two.makeText("100", speedCenter.x, speedCenter.y - 10);
+        speedTextNode.fill = '#fff';
+        speedTextNode.family = 'Orbitron';
+        speedTextNode.size = 18;
+        speedTextNode.weight = 900;
+
+        const kmhTextNode = two.makeText("KM/H", speedCenter.x, speedCenter.y + 12);
+        kmhTextNode.fill = '#aaa';
+        kmhTextNode.family = 'Orbitron';
+        kmhTextNode.size = 8;
+
+        let highCrystals = parseInt(localStorage.getItem('cyber_runner_high_crystals') || '0');
+        setTimeout(() => {
+            document.getElementById('high-crystal-text').innerText = "KỶ LỤC: " + highCrystals;
+        }, 100);
+
+        let obstacles = [];
+        let crystalItems = [];
+        let particles = [];
+
+        // LẮNG NGHE BÀN PHÍM
+        window.addEventListener('keydown', (e) => {
+            if (!gameActive) return;
+            const key = e.key.toLowerCase();
+
+            // --- ĐIỀU KHIỂN PLAYER 1 ---
+            if (!p1.isGameOver) {
+                if (key === 'a') {
+                    if (p1.currentLane > -1) {
+                        p1.currentLane--;
+                        p1.targetX = p1.startX + p1.currentLane * config.laneWidth;
+                    }
+                }
+                if (key === 'd') {
+                    if (p1.currentLane < 1) {
+                        p1.currentLane++;
+                        p1.targetX = p1.startX + p1.currentLane * config.laneWidth;
+                    }
+                }
+                if (key === 'w' && p1.isGrounded && !p1.isSliding) {
+                    playSynthJump();
+                    p1.velY = config.jumpForce;
+                    p1.isGrounded = false;
+                }
+                if (key === 's' && p1.isGrounded && !p1.isSliding) {
+                    playSynthSlide();
+                    p1.isSliding = true;
+                    p1.slideTimer = 30;
+                    p1.ship.scale.y = 0.35;
+                    p1.ship.position.y = 0.12;
+                }
+            }
+
+            // --- ĐIỀU KHIỂN PLAYER 2 ---
+            if (playMode === 'solo' && !p2.isGameOver) {
+                if (e.key === 'ArrowLeft') {
+                    if (p2.currentLane > -1) {
+                        p2.currentLane--;
+                        p2.targetX = p2.startX + p2.currentLane * config.laneWidth;
+                    }
+                }
+                if (e.key === 'ArrowRight') {
+                    if (p2.currentLane < 1) {
+                        p2.currentLane++;
+                        p2.targetX = p2.startX + p2.currentLane * config.laneWidth;
+                    }
+                }
+                if (e.key === 'ArrowUp' && p2.isGrounded && !p2.isSliding) {
+                    playSynthJump();
+                    p2.velY = config.jumpForce;
+                    p2.isGrounded = false;
+                }
+                if (e.key === 'ArrowDown' && p2.isGrounded && !p2.isSliding) {
+                    playSynthSlide();
+                    p2.isSliding = true;
+                    p2.slideTimer = 30;
+                    p2.ship.scale.y = 0.35;
+                    p2.ship.position.y = 0.12;
+                }
+            } else if (playMode === 'single' && !p1.isGameOver) {
+                // Chơi đơn: Hỗ trợ cả phím mũi tên cho P1
+                if (e.key === 'ArrowLeft') {
+                    if (p1.currentLane > -1) {
+                        p1.currentLane--;
+                        p1.targetX = p1.startX + p1.currentLane * config.laneWidth;
+                    }
+                }
+                if (e.key === 'ArrowRight') {
+                    if (p1.currentLane < 1) {
+                        p1.currentLane++;
+                        p1.targetX = p1.startX + p1.currentLane * config.laneWidth;
+                    }
+                }
+                if (e.key === 'ArrowUp' && p1.isGrounded && !p1.isSliding) {
+                    playSynthJump();
+                    p1.velY = config.jumpForce;
+                    p1.isGrounded = false;
+                }
+                if (e.key === 'ArrowDown' && p1.isGrounded && !p1.isSliding) {
+                    playSynthSlide();
+                    p1.isSliding = true;
+                    p1.slideTimer = 30;
+                    p1.ship.scale.y = 0.35;
+                    p1.ship.position.y = 0.12;
+                }
+            }
+        });
+
+        // HẠT NỔ 3D
+        function spawnExplosion(pos3D, colorHex = 0xff0055, count = 20) {
+            playSynthCrash();
+            const pGeo = new THREE.BufferGeometry();
+            const posArray = new Float32Array(count * 3);
+            const velocities = [];
+
+            for (let i = 0; i < count; i++) {
+                posArray[i * 3] = pos3D.x;
+                posArray[i * 3 + 1] = pos3D.y;
+                posArray[i * 3 + 2] = pos3D.z;
+
+                const spd = Math.random() * 0.15 + 0.05;
+                const angle1 = Math.random() * Math.PI * 2;
+                const angle2 = Math.random() * Math.PI;
+                velocities.push({
+                    x: Math.sin(angle2) * Math.cos(angle1) * spd,
+                    y: Math.sin(angle2) * Math.sin(angle1) * spd,
+                    z: Math.cos(angle2) * spd
+                });
+            }
+
+            pGeo.setAttribute('position', new THREE.BufferAttribute(posArray, 3));
+            const pMat = new THREE.PointsMaterial({
+                size: 0.22,
+                color: colorHex,
+                transparent: true,
+                opacity: 1.0,
+                blending: THREE.AdditiveBlending
+            });
+            const pSystem = new THREE.Points(pGeo, pMat);
+            scene.add(pSystem);
+
+            particles.push({
+                mesh: pSystem,
+                velocities,
+                life: 1.0,
+                decay: 0.04
+            });
+        }
+
+        function updateParticles() {
+            for (let i = particles.length - 1; i >= 0; i--) {
+                const p = particles[i];
+                p.life -= p.decay;
+
+                const positions = p.mesh.geometry.attributes.position.array;
+                for (let j = 0; j < p.velocities.length; j++) {
+                    positions[j * 3] += p.velocities[j].x;
+                    positions[j * 3 + 1] += p.velocities[j].y;
+                    positions[j * 3 + 2] += p.velocities[j].z;
+                }
+
+                p.mesh.geometry.attributes.position.needsUpdate = true;
+                p.mesh.material.opacity = p.life;
+
+                if (p.life <= 0) {
+                    scene.remove(p.mesh);
+                    particles.splice(i, 1);
+                }
+            }
+        }
+
+        // SPAWN RÀO CẢN
+        function spawnObstacleForPlayer(playerObj) {
+            const lane = Math.floor(Math.random() * 3) - 1;
+            const typeRand = Math.random();
+            let obstacleMesh;
+            let type;
+
+            const colorHex = playerObj.id === 1 ? 0x00f0ff : 0xff0055;
+
+            if (typeRand < 0.45) {
+                type = 'low';
+                obstacleMesh = new THREE.Mesh(
+                    new THREE.BoxGeometry(2.4, 0.7, 0.4),
+                    new THREE.MeshStandardMaterial({ color: colorHex, emissive: colorHex, emissiveIntensity: 0.6 })
+                );
+                obstacleMesh.position.set(playerObj.startX + lane * config.laneWidth, 0.35, -70);
+            } else if (typeRand < 0.8) {
+                type = 'high';
+                obstacleMesh = new THREE.Mesh(
+                    new THREE.BoxGeometry(2.6, 0.6, 0.4),
+                    new THREE.MeshStandardMaterial({ color: 0xffaa00, emissive: 0xffaa00, emissiveIntensity: 0.6 })
+                );
+                obstacleMesh.position.set(playerObj.startX + lane * config.laneWidth, 1.6, -70);
+            } else {
+                type = 'wall';
+                obstacleMesh = new THREE.Mesh(
+                    new THREE.BoxGeometry(2.4, 3.5, 0.4),
+                    new THREE.MeshStandardMaterial({ color: 0x9900ff, emissive: 0x9900ff, emissiveIntensity: 0.6 })
+                );
+                obstacleMesh.position.set(playerObj.startX + lane * config.laneWidth, 1.75, -70);
+            }
+
+            scene.add(obstacleMesh);
+            obstacles.push({ mesh: obstacleMesh, lane, type, playerOwner: playerObj.id });
+        }
+
+        // SPAWN PHA LÊ
+        function spawnCrystalForPlayer(playerObj) {
+            const lane = Math.floor(Math.random() * 3) - 1;
+            const crystalGeo = new THREE.OctahedronGeometry(0.35, 0);
+            const crystalMat = new THREE.MeshStandardMaterial({
+                color: 0x00ff66,
+                emissive: 0x00ff66,
+                emissiveIntensity: 0.7,
+                roughness: 0.1,
+                metalness: 0.9
+            });
+            const mesh = new THREE.Mesh(crystalGeo, crystalMat);
+            mesh.position.set(playerObj.startX + lane * config.laneWidth, 0.6, -70);
+            scene.add(mesh);
+            crystalItems.push({ mesh, lane, playerOwner: playerObj.id });
+        }
+
+        // CẬP NHẬT NGƯỜI CHƠI
+        function updatePlayerObj(pObj) {
+            if (pObj.isGameOver || !gameActive) return;
+
+            pObj.ship.position.x += (pObj.targetX - pObj.ship.position.x) * 0.18;
+            pObj.ship.rotation.y = -(pObj.ship.position.x - pObj.targetX) * 0.3;
+
+            if (!pObj.isGrounded) {
+                pObj.velY += config.gravity;
+                pObj.posY += pObj.velY;
+                if (pObj.posY <= 0.3) {
+                    pObj.posY = 0.3;
+                    pObj.velY = 0;
+                    pObj.isGrounded = true;
+                }
+                pObj.ship.position.y = pObj.posY;
+            }
+
+            if (pObj.isSliding) {
+                pObj.slideTimer--;
+                if (pObj.slideTimer <= 0) {
+                    pObj.isSliding = false;
+                    pObj.ship.scale.y = 1.0;
+                    pObj.ship.position.y = pObj.posY;
+                }
+            }
+
+            pObj.exhaustLight.position.set(pObj.ship.position.x, pObj.ship.position.y, pObj.ship.position.z + 0.8);
+            pObj.exhaustLight.intensity = 2 + Math.random() * 2;
+        }
+
+        // CẬP NHẬT CHƯỚNG NGẠI VẬT & PHA LÊ
+        function updateGameObjects() {
+            if (!gameActive) return;
+
+            // Chướng ngại vật
+            for (let i = obstacles.length - 1; i >= 0; i--) {
+                const obs = obstacles[i];
+                const activePlayer = obs.playerOwner === 1 ? p1 : p2;
+                
+                obs.mesh.position.z += activePlayer.speed;
+
+                if (obs.mesh.position.z > 12) {
+                    scene.remove(obs.mesh);
+                    obstacles.splice(i, 1);
+                } 
+                else if (!activePlayer.isGameOver && obs.mesh.position.z > config.playerZ - 0.7 && obs.mesh.position.z < config.playerZ + 0.7) {
+                    if (obs.lane === activePlayer.currentLane) {
+                        let collision = false;
+                        if (obs.type === 'low' && activePlayer.posY < 0.95) collision = true;
+                        else if (obs.type === 'high' && !activePlayer.isSliding) collision = true;
+                        else if (obs.type === 'wall') collision = true;
+
+                        if (collision) {
+                            triggerGameOverForPlayer(activePlayer);
+                        }
+                    }
+                }
+            }
+
+            // Pha lê
+            for (let i = crystalItems.length - 1; i >= 0; i--) {
+                const cry = crystalItems[i];
+                const activePlayer = cry.playerOwner === 1 ? p1 : p2;
+
+                cry.mesh.position.z += activePlayer.speed;
+                cry.mesh.rotation.y += 0.04;
+
+                if (cry.mesh.position.z > 12) {
+                    scene.remove(cry.mesh);
+                    crystalItems.splice(i, 1);
+                } 
+                else if (!activePlayer.isGameOver && cry.mesh.position.z > config.playerZ - 0.7 && cry.mesh.position.z < config.playerZ + 0.7) {
+                    if (cry.lane === activePlayer.currentLane && activePlayer.posY < 1.3 && !activePlayer.isSliding) {
+                        playSynthCollect();
+                        spawnExplosion(cry.mesh.position, 0x00ff66, 10);
+                        scene.remove(cry.mesh);
+                        crystalItems.splice(i, 1);
+                        
+                        activePlayer.crystals++;
+                        if (playMode === 'single') {
+                            document.getElementById('crystal-text').innerText = activePlayer.crystals.toString().padStart(2, '0') + " CRYSTALS";
+                        } else {
+                            document.getElementById(`p${activePlayer.id}-crystal-text`).innerText = activePlayer.crystals.toString().padStart(2, '0') + " CRYS";
+                        }
+                    }
+                }
+            }
+        }
+
+        // Cập nhật khoảng cách & tốc độ
+        function updateStats() {
+            if (!gameActive) return;
+
+            // Player 1
+            if (!p1.isGameOver) {
+                p1.distance += Math.round(p1.speed * 10);
+                p1.speed = Math.min(config.maxSpeed, config.baseSpeed + (p1.distance * 0.0001));
+                if (playMode === 'single') {
+                    document.getElementById('distance-text').innerText = p1.distance.toString().padStart(4, '0') + " m";
+                    const speedKmh = Math.round(p1.speed * 500);
+                    document.getElementById('speed-text').innerText = `VẬN TỐC: ${speedKmh} KM/H`;
+                    document.getElementById('multiplier-text').innerText = `SPEED: x${(p1.speed / config.baseSpeed).toFixed(1)}`;
+                    
+                    const percent = (p1.speed - config.baseSpeed) / (config.maxSpeed - config.baseSpeed);
+                    speedArcFill.endingAngle = -Math.PI + (percent * Math.PI);
+                    speedTextNode.value = speedKmh.toString();
+                } else {
+                    document.getElementById('p1-distance-text').innerText = p1.distance.toString().padStart(4, '0') + " m";
+                }
+            }
+
+            // Player 2
+            if (playMode === 'solo' && !p2.isGameOver) {
+                p2.distance += Math.round(p2.speed * 10);
+                p2.speed = Math.min(config.maxSpeed, config.baseSpeed + (p2.distance * 0.0001));
+                document.getElementById('p2-distance-text').innerText = p2.distance.toString().padStart(4, '0') + " m";
+            }
+        }
+
+        // KHI MỘT NGƯỜI CHƠI THUA CUỘC
+        function triggerGameOverForPlayer(playerObj) {
+            playerObj.isGameOver = true;
+            spawnExplosion(playerObj.ship.position, playerObj.id === 1 ? 0x00f0ff : 0xff0055, 45);
+            scene.remove(playerObj.ship);
+
+            if (playMode === 'single') {
+                gameActive = false;
+                
+                const recordAlert = document.getElementById('new-record-alert');
+                if (p1.crystals > highCrystals) {
+                    highCrystals = p1.crystals;
+                    localStorage.setItem('cyber_runner_high_crystals', highCrystals);
+                    document.getElementById('high-crystal-text').innerText = "KỶ LỤC: " + highCrystals;
+                    recordAlert.style.display = 'block';
+                } else {
+                    recordAlert.style.display = 'none';
+                }
+
+                document.getElementById('end-screen-title').innerText = "TẦN SỐ RẠN NỨT!";
+                document.getElementById('final-dist-text').innerText = "QUÃNG ĐƯỜNG: " + p1.distance + " m";
+                document.getElementById('final-cryst-text').innerText = "PHA LÊ THU THẬP: " + p1.crystals;
+                document.getElementById('game-over-screen').classList.add('show');
+            } else {
+                // Chế độ Solo
+                const p1Result = document.getElementById('p1-result-text');
+                const p2Result = document.getElementById('p2-result-text');
+                const p1Overlay = document.getElementById('p1-split-overlay');
+                const p2Overlay = document.getElementById('p2-split-overlay');
+
+                if (playerObj.id === 1) {
+                    p1Result.innerText = "BẠN ĐÃ THUA";
+                    p1Result.className = "result-text result-lose show";
+                    p1Overlay.style.background = "rgba(255, 0, 85, 0.2)";
+                } else {
+                    p2Result.innerText = "BẠN ĐÃ THUA";
+                    p2Result.className = "result-text result-lose show";
+                    p2Overlay.style.background = "rgba(255, 0, 85, 0.2)";
+                }
+
+                // Nếu cả hai đều game over
+                if (p1.isGameOver && p2.isGameOver) {
+                    gameActive = false;
+                    
+                    // Phân định thắng/thua
+                    if (p1.distance > p2.distance) {
+                        p1Result.innerText = "WIN!";
+                        p1Result.className = "result-text result-win show";
+                        p1Overlay.style.background = "rgba(0, 255, 102, 0.15)";
+                    } else if (p2.distance > p1.distance) {
+                        p2Result.innerText = "WIN!";
+                        p2Result.className = "result-text result-win show";
+                        p2Overlay.style.background = "rgba(0, 255, 102, 0.15)";
+                    } else {
+                        p1Result.innerText = "HÒA";
+                        p1Result.className = "result-text show";
+                        p2Result.innerText = "HÒA";
+                        p2Result.className = "result-text show";
+                    }
+
+                    document.getElementById('end-screen-title').innerText = "TRẬN ĐẤU KẾT THÚC!";
+                    document.getElementById('final-dist-text').innerText = `P1: ${p1.distance}m | P2: ${p2.distance}m`;
+                    document.getElementById('final-cryst-text').innerText = `P1: ${p1.crystals} | P2: ${p2.crystals}`;
+                    document.getElementById('new-record-alert').style.display = 'none';
+                    document.getElementById('game-over-screen').classList.add('show');
+                } else {
+                    // Người còn lại thắng lập tức
+                    const winner = playerObj.id === 1 ? p2 : p1;
+                    const winnerResult = winner.id === 1 ? p1Result : p2Result;
+                    const winnerOverlay = winner.id === 1 ? p1Overlay : p2Overlay;
+
+                    winnerResult.innerText = "WIN!";
+                    winnerResult.className = "result-text result-win show";
+                    winnerOverlay.style.background = "rgba(0, 255, 102, 0.15)";
+
+                    // Kết thúc game luôn
+                    winner.isGameOver = true;
+                    scene.remove(winner.ship);
+                    gameActive = false;
+
+                    document.getElementById('end-screen-title').innerText = `PLAYER ${winner.id} CHIẾN THẮNG!`;
+                    document.getElementById('final-dist-text').innerText = `P1: ${p1.distance}m | P2: ${p2.distance}m`;
+                    document.getElementById('final-cryst-text').innerText = `P1: ${p1.crystals} | P2: ${p2.crystals}`;
+                    document.getElementById('new-record-alert').style.display = 'none';
+                    document.getElementById('game-over-screen').classList.add('show');
+                }
+            }
+        }
+
+        // CHỌN CHẾ ĐỘ CHƠI TỪ LOBBY
+        function selectPlayMode(mode) {
+            playMode = mode;
+            document.getElementById('mode-select-screen').style.display = 'none';
+
+            // Cấu hình HUD tương ứng
+            if (playMode === 'single') {
+                document.getElementById('single-hud').style.display = 'flex';
+                document.getElementById('solo-hud').style.display = 'none';
+                document.getElementById('control-single-desc').style.display = 'block';
+                document.getElementById('control-solo-desc').style.display = 'none';
+                twoContainer.style.display = 'block'; // Hiển thị đồng hồ Two.js
+            } else {
+                document.getElementById('single-hud').style.display = 'none';
+                document.getElementById('solo-hud').style.display = 'flex';
+                document.getElementById('control-single-desc').style.display = 'none';
+                document.getElementById('control-solo-desc').style.display = 'block';
+                twoContainer.style.display = 'none'; // Ẩn đồng hồ Two.js khi Solo
+            }
+
+            restartGame();
+        }
+        window.selectPlayMode = selectPlayMode;
+
+        // KHỞI ĐỘNG LẠI / THIẾT LẬP BAN ĐẦU
+        function restartGame() {
+            gameActive = true;
+            
+            // Đặt lại trạng thái P1
+            p1.isGameOver = false;
+            p1.distance = 0;
+            p1.crystals = 0;
+            p1.speed = config.baseSpeed;
+            p1.currentLane = 0;
+            p1.posY = 0.3;
+            p1.velY = 0;
+            p1.isGrounded = true;
+            p1.isSliding = false;
+
+            // Đặt lại trạng thái P2
+            p2.isGameOver = false;
+            p2.distance = 0;
+            p2.crystals = 0;
+            p2.speed = config.baseSpeed;
+            p2.currentLane = 0;
+            p2.posY = 0.3;
+            p2.velY = 0;
+            p2.isGrounded = true;
+            p2.isSliding = false;
+
+            // Định vị X dựa trên chế độ chơi
+            if (playMode === 'single') {
+                p1.startX = 0;
+                p1.targetX = 0;
+            } else {
+                p1.startX = -20;
+                p1.targetX = -20;
+                p2.startX = 20;
+                p2.targetX = 20;
+            }
+            p1.x = p1.startX;
+            p2.x = p2.startX;
+
+            // Clear 3D objects
+            obstacles.forEach(o => scene.remove(o.mesh));
+            crystalItems.forEach(c => scene.remove(c.mesh));
+            particles.forEach(p => scene.remove(p.mesh));
+            obstacles = [];
+            crystalItems = [];
+            particles = [];
+
+            // Remove old runways if exist
+            if (runwayP1) {
+                scene.remove(runwayP1.group);
+                runwayP1 = null;
+            }
+            if (runwayP2) {
+                scene.remove(runwayP2.group);
+                runwayP2 = null;
+            }
+
+            // Dọn dẹp Overlays Solo
+            document.getElementById('p1-result-text').className = "result-text";
+            document.getElementById('p2-result-text').className = "result-text";
+            document.getElementById('p1-split-overlay').style.background = "transparent";
+            document.getElementById('p2-split-overlay').style.background = "transparent";
+
+            // Tạo đường chạy mới
+            if (playMode === 'single') {
+                runwayP1 = createRunway(0, 0x00f0ff);
+            } else {
+                runwayP1 = createRunway(-20, 0x00f0ff);
+                runwayP2 = createRunway(20, 0xff0055);
+            }
+
+            // Hồi sinh tàu P1
+            p1.ship.scale.y = 1.0;
+            p1.ship.position.set(p1.startX, p1.posY, config.playerZ);
+            scene.add(p1.ship);
+            scene.add(p1.exhaustLight);
+
+            // Hồi sinh tàu P2 nếu Solo
+            if (playMode === 'solo') {
+                p2.ship.scale.y = 1.0;
+                p2.ship.position.set(p2.startX, p2.posY, config.playerZ);
+                scene.add(p2.ship);
+                scene.add(p2.exhaustLight);
+            } else {
+                scene.remove(p2.ship);
+                scene.remove(p2.exhaustLight);
+            }
+
+            // Đặt lại HUD
+            document.getElementById('distance-text').innerText = "0000 m";
+            document.getElementById('crystal-text').innerText = "00 CRYSTALS";
+            document.getElementById('p1-distance-text').innerText = "0000 m";
+            document.getElementById('p1-crystal-text').innerText = "00 CRYS";
+            document.getElementById('p2-distance-text').innerText = "0000 m";
+            document.getElementById('p2-crystal-text').innerText = "00 CRYS";
+
+            document.getElementById('game-over-screen').classList.remove('show');
+            showWarningMessage("CYBER RUN READY");
+        }
+
+        // Hiện cảnh báo
+        function showWarningMessage(msgText) {
+            const msgBox = document.getElementById('game-message');
+            msgBox.innerText = msgText;
+            msgBox.classList.add('show');
+            setTimeout(() => {
+                msgBox.classList.remove('show');
+            }, 2000);
+        }
+
+        // SPAWN LOOP
+        let p1ObstacleTimer = 0;
+        let p2ObstacleTimer = 0;
+        let p1CrystalTimer = 0;
+        let p2CrystalTimer = 0;
+
+        function handleSpawning() {
+            if (!gameActive) return;
+
+            // Player 1 spawn
+            if (!p1.isGameOver) {
+                p1ObstacleTimer++;
+                const obsDelay1 = Math.max(30, 90 - Math.round(p1.speed * 100));
+                if (p1ObstacleTimer >= obsDelay1) {
+                    p1ObstacleTimer = 0;
+                    spawnObstacleForPlayer(p1);
+                }
+
+                p1CrystalTimer++;
+                if (p1CrystalTimer >= 45) {
+                    p1CrystalTimer = 0;
+                    spawnCrystalForPlayer(p1);
+                }
+            }
+
+            // Player 2 spawn
+            if (playMode === 'solo' && !p2.isGameOver) {
+                p2ObstacleTimer++;
+                const obsDelay2 = Math.max(30, 90 - Math.round(p2.speed * 100));
+                if (p2ObstacleTimer >= obsDelay2) {
+                    p2ObstacleTimer = 0;
+                    spawnObstacleForPlayer(p2);
+                }
+
+                p2CrystalTimer++;
+                if (p2CrystalTimer >= 45) {
+                    p2CrystalTimer = 0;
+                    spawnCrystalForPlayer(p2);
+                }
+            }
+        }
+
+        // VÒNG LẶP RENDER CHÍNH
+        let gridOffset1 = 0;
+        let gridOffset2 = 0;
+
+        function animate() {
+            requestAnimationFrame(animate);
+
+            if (gameActive) {
+                updatePlayerObj(p1);
+                if (playMode === 'solo') updatePlayerObj(p2);
+                
+                updateGameObjects();
+                handleSpawning();
+                updateStats();
+
+                // Dịch chuyển đường lưới Neon lùi
+                if (!p1.isGameOver && runwayP1) {
+                    gridOffset1 += p1.speed;
+                    runwayP1.grid.position.z = (gridOffset1 % 2);
+                }
+                if (playMode === 'solo' && !p2.isGameOver && runwayP2) {
+                    gridOffset2 += p2.speed;
+                    runwayP2.grid.position.z = (gridOffset2 % 2);
+                }
+            }
+
+            starfield.rotation.y += 0.0005;
+            starfield.position.z += 0.02;
+            if (starfield.position.z > 30) starfield.position.z = 0;
+
+            updateParticles();
+
+            // RENDER CHIA ĐÔI MÀN HÌNH NẾU SOLO
+            if (playMode === 'solo') {
+                const w = window.innerWidth;
+                const h = window.innerHeight;
+
+                // Cập nhật vị trí camera bám theo player
+                camera1.position.x = p1.ship.position.x;
+                camera1.lookAt(p1.ship.position.x, 1.2, 0);
+
+                camera2.position.x = p2.ship.position.x;
+                camera2.lookAt(p2.ship.position.x, 1.2, 0);
+
+                // Render nửa trái (Player 1)
+                renderer.setViewport(0, 0, w / 2, h);
+                renderer.setScissor(0, 0, w / 2, h);
+                renderer.setScissorTest(true);
+                renderer.render(scene, camera1);
+
+                // Render nửa phải (Player 2)
+                renderer.setViewport(w / 2, 0, w / 2, h);
+                renderer.setScissor(w / 2, 0, w / 2, h);
+                renderer.setScissorTest(true);
+                renderer.render(scene, camera2);
+            } else {
+                // Chế độ chơi đơn: full screen
+                camera1.position.x = p1.ship.position.x;
+                camera1.lookAt(p1.ship.position.x, 1.2, 0);
+
+                renderer.setViewport(0, 0, window.innerWidth, window.innerHeight);
+                renderer.setScissor(0, 0, window.innerWidth, window.innerHeight);
+                renderer.setScissorTest(false);
+                renderer.render(scene, camera1);
+            }
+        }
+
+        // LẮNG NGHE CO GIÃN MÀN HÌNH
+        window.addEventListener('resize', () => {
+            const w = window.innerWidth;
+            const h = window.innerHeight;
+            
+            camera1.aspect = (w / (playMode === 'solo' ? 2 : 1)) / h;
+            camera1.updateProjectionMatrix();
+            
+            camera2.aspect = (w / 2) / h;
+            camera2.updateProjectionMatrix();
+
+            renderer.setSize(w, h);
+            two.setSize(w, h);
+            
+            speedCenter.y = h - 80;
+            speedArcBg.translation.set(speedCenter.x, speedCenter.y);
+            speedArcFill.translation.set(speedCenter.x, speedCenter.y);
+            speedTextNode.translation.set(speedCenter.x, speedCenter.y - 10);
+            kmhTextNode.translation.set(speedCenter.x, speedCenter.y + 12);
+        });
+
+        // Bắt đầu ứng dụng
+        animate();
+    </script>
+    <a href="index.html" id="global-exit-btn" style="
+        position: fixed;
+        top: 15px;
+        left: 15px;
+        z-index: 99999;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 10px 20px;
+        background: rgba(15, 23, 42, 0.6);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        border: 1px solid rgba(255, 255, 255, 0.15);
+        border-radius: 12px;
+        color: #f3f4f6;
+        text-decoration: none;
+        font-family: 'Outfit', 'Segoe UI', sans-serif;
+        font-size: 14px;
+        font-weight: 600;
+        letter-spacing: 0.5px;
+        box-shadow: 0 4px 30px rgba(0, 0, 0, 0.3);
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        cursor: pointer;
+    ">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="transition: transform 0.3s ease;">
+            <path d="M19 12H5M12 19l-7-7 7-7"/>
+        </svg>
+        Thoát
+    </a>
+
+    <script>
+        function showMainMenu() {
+            gameActive = false;
+            document.getElementById('mode-select-screen').style.display = 'flex';
+            document.getElementById('game-over-screen').classList.remove('show');
+            
+            // Clear 3D objects
+            obstacles.forEach(o => scene.remove(o.mesh));
+            crystalItems.forEach(c => scene.remove(c.mesh));
+            particles.forEach(p => scene.remove(p.mesh));
+            obstacles = [];
+            crystalItems = [];
+            particles = [];
+
+            if (p1.ship) {
+                scene.remove(p1.ship);
+                scene.remove(p1.exhaustLight);
+            }
+            if (p2.ship) {
+                scene.remove(p2.ship);
+                scene.remove(p2.exhaustLight);
+            }
+            if (runwayP1) {
+                scene.remove(runwayP1.group);
+                runwayP1 = null;
+            }
+            if (runwayP2) {
+                scene.remove(runwayP2.group);
+                runwayP2 = null;
+            }
+        }
+
+        document.getElementById('global-exit-btn').addEventListener('click', function(e) {
+            e.preventDefault();
+            this.style.transform = 'scale(0.95)';
+            setTimeout(() => {
+                const lobby = document.getElementById('mode-select-screen');
+                const lobbyVisible = lobby && lobby.style.display !== 'none' && getComputedStyle(lobby).display !== 'none';
+                
+                if (gameActive || !lobbyVisible) {
+                    showMainMenu();
+                    this.style.transform = 'scale(1)';
+                } else {
+                    if (window.opener && window.history.length === 1) {
+                        window.close();
+                    } else {
+                        window.location.href = 'index.html';
+                    }
+                }
+            }, 150);
+        });
+
+        const exitBtn = document.getElementById('global-exit-btn');
+        exitBtn.addEventListener('mouseenter', function() {
+            this.style.background = 'rgba(99, 102, 241, 0.3)';
+            this.style.borderColor = 'rgba(99, 102, 241, 0.6)';
+            this.style.boxShadow = '0 0 15px rgba(99, 102, 241, 0.4)';
+            this.querySelector('svg').style.transform = 'translateX(-3px)';
+        });
+        exitBtn.addEventListener('mouseleave', function() {
+            this.style.background = 'rgba(15, 23, 42, 0.6)';
+            this.style.borderColor = 'rgba(255, 255, 255, 0.15)';
+            this.style.boxShadow = '0 4px 30px rgba(0, 0, 0, 0.3)';
+            this.querySelector('svg').style.transform = 'translateX(0)';
+        });
+    </script>
+</body>
+</html>

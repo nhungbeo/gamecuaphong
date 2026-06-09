@@ -1,0 +1,802 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tứ Thần Thú: Đền Thờ Cổ Đại</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { margin: 0; overflow: hidden; font-family: 'Inter', sans-serif; background-color: #020617; }
+        canvas { display: block; background: radial-gradient(circle at center, #0b1329 0%, #020617 100%); }
+        #ui-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; }
+        .interactive { pointer-events: auto; }
+        
+        @keyframes magicGlow {
+            0%, 100% { border-color: rgba(234, 179, 8, 0.3); box-shadow: 0 0 15px rgba(234, 179, 8, 0.1); }
+            50% { border-color: rgba(239, 68, 68, 0.6); box-shadow: 0 0 25px rgba(239, 68, 68, 0.3); }
+        }
+        .glowing-panel { animation: magicGlow 4s infinite; }
+    </style>
+</head>
+<body>
+
+    <!-- Màn hình Bắt đầu Game -->
+    <div id="start-screen" class="fixed inset-0 bg-slate-950/95 backdrop-blur-md flex flex-col items-center justify-center text-white z-50 transition-opacity duration-300">
+        <div class="bg-slate-900/95 p-8 rounded-3xl border border-yellow-500/30 shadow-2xl text-center max-w-lg w-full mx-4 overflow-y-auto max-h-[95vh] glowing-panel">
+            <span class="text-7xl animate-pulse inline-block mb-2">🐉🐅🐢🦅</span>
+            <h1 class="text-4xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-red-500 via-amber-400 to-yellow-500 tracking-wider uppercase drop-shadow-lg">Đền Thờ Tứ Linh</h1>
+            <p class="text-slate-300 mt-4 text-sm leading-relaxed">
+                Yêu ma hắc ám phương Bắc đang trỗi dậy dữ dội. Hãy điều khiển pháp trượng và triệu hồi sức mạnh tối cao của <span class="text-yellow-400 font-bold">Tứ Linh Thần Thú</span> để bảo vệ Phong Ấn Đền Thờ qua 5 ván đấu sinh tử!
+            </p>
+
+            <div class="bg-slate-950/80 p-4 rounded-2xl my-5 text-left text-xs text-slate-300 space-y-2 border border-slate-800">
+                <p class="font-bold text-red-400 text-sm border-b border-slate-800 pb-1 uppercase tracking-wider">⚠️ QUY TẮC PHÒNG THỦ KẾT GIỚI:</p>
+                <p class="text-amber-300">• <strong>Giới hạn nâng cấp (MAX 5):</strong> Sức mạnh và Tốc đánh chỉ có thể cường hóa tối đa 5 lần (5 Sao ★★★★★ là cực hạn).</p>
+                <p class="text-rose-300">• <strong>Độ khó tăng cường:</strong> Quái vật di chuyển nhanh hơn, đông hơn và hung tợn hơn qua từng đợt.</p>
+                <p class="text-red-400">• <strong>Chiến Thắng Ở Ván 5:</strong> Vượt qua 5 đợt đấu dồn dập, tiêu diệt được Chúa Tể Hắc Ám khổng lồ (3500 HP) ở ván cuối sẽ kích hoạt màn hình CHIẾN THẮNG vang dội!</p>
+            </div>
+
+            <button onclick="startGame()" class="w-full py-4 bg-gradient-to-r from-red-600 via-orange-600 to-yellow-500 hover:from-red-500 hover:to-orange-500 text-slate-950 font-black rounded-xl shadow-lg hover:shadow-orange-500/30 active:scale-95 transition-all duration-150 cursor-pointer pointer-events-auto text-base tracking-wider uppercase">
+                BẢO VỆ PHONG ẤN
+            </button>
+        </div>
+    </div>
+
+    <!-- Lớp Giao diện HUD chính trong game -->
+    <div id="ui-layer" class="flex flex-col justify-between p-4 md:p-6 select-none z-10">
+        <!-- Header: Điểm, Vòng đấu, Máu Altar và Hướng dẫn -->
+        <div class="flex justify-between w-full">
+            <div class="bg-slate-900/75 p-3 rounded-2xl border border-yellow-500/20 backdrop-blur-md shadow-2xl flex flex-col justify-center">
+                <h2 id="wave-display" class="text-xs font-bold text-amber-400 uppercase tracking-widest">Đợt tấn công: 1/5</h2>
+                <p id="score-display" class="text-2xl md:text-3xl font-mono font-black text-transparent bg-clip-text bg-gradient-to-r from-white via-slate-100 to-amber-300 mt-1">Linh Hồn: 0</p>
+            </div>
+            
+            <div class="flex flex-col items-end justify-center gap-2">
+                <div class="bg-slate-900/75 p-3 rounded-2xl border border-yellow-500/20 backdrop-blur-md shadow-2xl flex flex-col items-end justify-center">
+                    <span class="text-xs font-bold text-red-400 uppercase tracking-widest mb-1 flex items-center gap-1">💖 Máu Đền Thờ</span>
+                    <div class="w-44 md:w-64 h-4 bg-slate-950 rounded-full overflow-hidden border border-rose-500/30 relative shadow-inner">
+                        <div id="hp-bar" class="h-full bg-gradient-to-r from-red-600 via-rose-500 to-red-400 transition-all duration-150" style="width: 100%;"></div>
+                        <span id="hp-text" class="absolute inset-0 flex items-center justify-center text-[10px] font-black text-white">100/100</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Footer: Kỹ năng & Bảng Nâng cấp -->
+        <div class="flex flex-col md:flex-row justify-between items-center gap-4 w-full mt-auto pointer-events-auto">
+            <!-- Spell Hotbar -->
+            <div class="flex gap-3 bg-slate-900/75 p-2.5 rounded-2xl border border-slate-800/80 backdrop-blur-md shadow-2xl interactive">
+                <button onclick="triggerSpell(0)" class="relative flex flex-col items-center justify-center w-14 h-14 rounded-xl border border-cyan-500/40 bg-cyan-950/30 text-cyan-400 transition-all hover:scale-105 active:scale-95 focus:outline-none shadow-lg">
+                    <span class="text-xl">🐉</span> <span class="text-[9px] font-black uppercase tracking-wider">Lôi (1)</span>
+                    <div id="cooldown-0" class="absolute inset-0 bg-slate-950/85 rounded-xl flex items-center justify-center text-[10px] font-black text-cyan-300 transition-all" style="height: 100%">100%</div>
+                </button>
+                <button onclick="triggerSpell(1)" class="relative flex flex-col items-center justify-center w-14 h-14 rounded-xl border border-slate-400/40 bg-slate-850/30 text-slate-300 transition-all hover:scale-105 active:scale-95 focus:outline-none shadow-lg">
+                    <span class="text-xl">🐅</span> <span class="text-[9px] font-black uppercase tracking-wider">Băng (2)</span>
+                    <div id="cooldown-1" class="absolute inset-0 bg-slate-950/85 rounded-xl flex items-center justify-center text-[10px] font-black text-slate-300 transition-all" style="height: 100%">100%</div>
+                </button>
+                <button onclick="triggerSpell(2)" class="relative flex flex-col items-center justify-center w-14 h-14 rounded-xl border border-emerald-500/40 bg-emerald-950/30 text-emerald-400 transition-all hover:scale-105 active:scale-95 focus:outline-none shadow-lg">
+                    <span class="text-xl">🐢</span> <span class="text-[9px] font-black uppercase tracking-wider">Thủ (3)</span>
+                    <div id="cooldown-2" class="absolute inset-0 bg-slate-950/85 rounded-xl flex items-center justify-center text-[10px] font-black text-emerald-300 transition-all" style="height: 100%">100%</div>
+                </button>
+                <button onclick="triggerSpell(3)" class="relative flex flex-col items-center justify-center w-14 h-14 rounded-xl border border-red-500/40 bg-red-950/30 text-red-400 transition-all hover:scale-105 active:scale-95 focus:outline-none shadow-lg">
+                    <span class="text-xl">🦅</span> <span class="text-[9px] font-black uppercase tracking-wider">Hỏa (4)</span>
+                    <div id="cooldown-3" class="absolute inset-0 bg-slate-950/85 rounded-xl flex items-center justify-center text-[10px] font-black text-red-300 transition-all" style="height: 100%">100%</div>
+                </button>
+            </div>
+
+            <!-- Bảng Nâng cấp giới hạn MAX 5 -->
+            <div class="flex gap-2.5 bg-slate-900/75 p-2.5 rounded-2xl border border-slate-800/80 backdrop-blur-md shadow-2xl interactive">
+                <button id="btn-up-dmg" onclick="buyUpgrade('dmg')" class="flex flex-col items-center justify-center px-3.5 py-1.5 rounded-xl border border-amber-500/30 bg-amber-950/20 text-amber-400 text-xs font-bold hover:bg-amber-900/30 transition-all active:scale-95">
+                    <span class="flex items-center gap-1">⚔️ Sức Mạnh <span id="star-dmg" class="text-yellow-500"></span></span>
+                    <span id="cost-dmg" class="text-[9px] text-slate-400 mt-0.5">Giá: 15 Hồn</span>
+                </button>
+                <button id="btn-up-spd" onclick="buyUpgrade('spd')" class="flex flex-col items-center justify-center px-3.5 py-1.5 rounded-xl border border-cyan-500/30 bg-cyan-950/20 text-cyan-400 text-xs font-bold hover:bg-cyan-900/30 transition-all active:scale-95">
+                    <span class="flex items-center gap-1">⚡ Tốc Đánh <span id="star-spd" class="text-cyan-400"></span></span>
+                    <span id="cost-spd" class="text-[9px] text-slate-400 mt-0.5">Giá: 20 Hồn</span>
+                </button>
+                <button onclick="buyUpgrade('heal')" class="flex flex-col items-center justify-center px-3.5 py-1.5 rounded-xl border border-rose-500/30 bg-rose-950/20 text-rose-400 text-xs font-bold hover:bg-rose-900/30 transition-all active:scale-95">
+                    <span class="flex items-center gap-1">💚 Hồi Máu</span>
+                    <span id="cost-heal" class="text-[9px] text-slate-400 mt-0.5">Giá: 10 Hồn</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Màn hình Thất bại (Game Over) -->
+    <div id="game-over-screen" class="hidden fixed inset-0 bg-slate-950/95 backdrop-blur-md flex flex-col items-center justify-center text-white z-50 transition-all duration-300">
+        <div class="bg-slate-900/90 p-8 rounded-3xl border border-red-500/50 shadow-2xl text-center max-w-sm w-full mx-4">
+            <span class="text-7xl animate-bounce inline-block mb-2">💀</span>
+            <h2 class="text-3xl font-black text-red-500 tracking-wider uppercase">Phong Ấn Sụp Đổ!</h2>
+            <p class="text-slate-300 mt-2 text-sm leading-relaxed">Sức mạnh hắc ám đã nuốt chửng Đền Thờ Thần Thú.</p>
+            <div class="bg-slate-950 p-4 rounded-2xl my-6 border border-slate-800">
+                <p class="text-xs text-slate-400 uppercase tracking-widest">Thất bại ở ván đấu</p>
+                <p id="final-wave" class="text-4xl font-mono font-black text-red-500 mt-1">Ván 1</p>
+            </div>
+            <button onclick="resetGame()" class="w-full py-3.5 bg-gradient-to-r from-red-600 via-orange-600 to-yellow-500 hover:from-red-500 hover:to-orange-500 text-slate-950 font-black rounded-xl shadow-lg active:scale-95 transition-all duration-150 pointer-events-auto cursor-pointer uppercase">
+                THỬ SỨC LẠI
+            </button>
+        </div>
+    </div>
+
+    <!-- Màn hình CHIẾN THẮNG TOÀN DIỆN khi kết thúc ván cuối và Boss bị hạ gục -->
+    <div id="victory-screen" class="hidden fixed inset-0 bg-slate-950/95 backdrop-blur-md flex flex-col items-center justify-center text-white z-50 transition-all duration-300">
+        <div class="bg-slate-900/95 p-8 rounded-3xl border border-yellow-500 shadow-2xl text-center max-w-md w-full mx-4 glowing-panel">
+            <span class="text-7xl animate-bounce inline-block mb-2">🏆👑🔥</span>
+            <h2 class="text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 via-amber-300 to-yellow-500 tracking-wider uppercase drop-shadow">CHIẾN THẮNG TỐI CAO!</h2>
+            <p class="text-slate-200 mt-3 text-sm leading-relaxed">Chúc mừng Pháp Sư! Bạn đã tiêu diệt thành công <span class="text-red-400 font-bold">Chúa Tể Hắc Ám</span> ở ván cuối và bảo vệ vẹn toàn Đền Thờ Tứ Linh!</p>
+            <div class="bg-slate-950 p-4 rounded-2xl my-5 border border-slate-800">
+                <p class="text-xs text-slate-400 uppercase tracking-widest">Tổng điểm Linh Hồn đạt được</p>
+                <p id="victory-score" class="text-4xl font-mono font-black text-yellow-400 mt-1">0</p>
+            </div>
+            <button onclick="resetGame()" class="w-full py-4 bg-gradient-to-r from-yellow-500 via-amber-500 to-orange-500 text-slate-950 font-black rounded-xl shadow-lg active:scale-95 transition-all duration-150 pointer-events-auto cursor-pointer uppercase tracking-wider">
+                CHƠI LẠI TỪ ĐẦU
+            </button>
+        </div>
+    </div>
+
+    <canvas id="gameCanvas"></canvas>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const hpBar = document.getElementById('hp-bar');
+        const hpText = document.getElementById('hp-text');
+        const scoreDisplay = document.getElementById('score-display');
+        const waveDisplay = document.getElementById('wave-display');
+        const gameOverScreen = document.getElementById('game-over-screen');
+        const victoryScreen = document.getElementById('victory-screen');
+        const victoryScore = document.getElementById('victory-score');
+        const finalWave = document.getElementById('final-wave');
+        const startScreen = document.getElementById('start-screen');
+
+        let width, height;
+        let score = 0;
+        let wave = 1;
+        let waveActive = false;
+        let gameActive = false;
+        let bossSpawned = false;
+        
+        let altar = { x: 0, y: 0, r: 90, hp: 100, maxHp: 100 };
+        let player = { angle: -Math.PI / 2, fireRate: 15, currentCooldown: 0 };
+        
+        let enemies = [];
+        let projectiles = [];
+        let particles = [];
+        let activeSpells = [];
+
+        let shakeTime = 0;
+        let shakeIntensity = 0;
+
+        let spellGauges = [100, 100, 100, 100]; 
+        let spellChargeRates = [0.08, 0.06, 0.09, 0.05]; 
+        
+        let isShooting = false;
+
+        let stats = {
+            damage: 25,
+            dmgLevel: 1,      
+            speedLevel: 1,    
+            maxHp: 100,
+            costDmg: 15,
+            costSpd: 20,
+            costHeal: 10
+        };
+
+        let audioCtx = null;
+
+        function initAudio() {
+            if (!audioCtx) {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            }
+            if (audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+        }
+
+        function triggerScreenShake(duration, intensity) {
+            shakeTime = duration;
+            shakeIntensity = intensity;
+        }
+
+        function playShootSound() {
+            initAudio();
+            if (!audioCtx) return;
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(600, audioCtx.currentTime);
+            osc.frequency.exponentialRampToValueAtTime(100, audioCtx.currentTime + 0.08);
+            gain.gain.setValueAtTime(0.03, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.08);
+            osc.start();
+            osc.stop(audioCtx.currentTime + 0.08);
+        }
+
+        function playSpellSound(type) {
+            initAudio();
+            if (!audioCtx) return;
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            
+            if (type === 0) { osc.type = 'sawtooth'; osc.frequency.setValueAtTime(250, audioCtx.currentTime); osc.frequency.exponentialRampToValueAtTime(1300, audioCtx.currentTime + 0.5); gain.gain.setValueAtTime(0.1, audioCtx.currentTime); }
+            else if (type === 1) { osc.type = 'triangle'; osc.frequency.setValueAtTime(700, audioCtx.currentTime); osc.frequency.exponentialRampToValueAtTime(200, audioCtx.currentTime + 0.5); gain.gain.setValueAtTime(0.15, audioCtx.currentTime); }
+            else if (type === 2) { osc.type = 'square'; osc.frequency.setValueAtTime(80, audioCtx.currentTime); osc.frequency.exponentialRampToValueAtTime(30, audioCtx.currentTime + 0.7); gain.gain.setValueAtTime(0.2, audioCtx.currentTime); }
+            else { osc.type = 'sawtooth'; osc.frequency.setValueAtTime(120, audioCtx.currentTime); osc.frequency.exponentialRampToValueAtTime(40, audioCtx.currentTime + 0.7); gain.gain.setValueAtTime(0.25, audioCtx.currentTime); }
+            
+            gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.7);
+            osc.start();
+            osc.stop(audioCtx.currentTime + 0.7);
+        }
+
+        function playHitSound() {
+            initAudio();
+            if (!audioCtx) return;
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.type = 'square';
+            osc.frequency.setValueAtTime(65, audioCtx.currentTime);
+            osc.frequency.exponentialRampToValueAtTime(10, audioCtx.currentTime + 0.3);
+            gain.gain.setValueAtTime(0.18, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.3);
+            osc.start();
+            osc.stop(audioCtx.currentTime + 0.3);
+        }
+
+        class GameParticle {
+            constructor(x, y, dx, dy, size, color, life, type = 'normal') {
+                this.x = x; this.y = y; this.dx = dx; this.dy = dy;
+                this.size = size; this.color = color; this.maxLife = life; this.life = life;
+                this.type = type; this.angle = Math.random() * Math.PI * 2;
+                this.va = (Math.random() - 0.5) * 0.1;
+            }
+            update() {
+                this.x += this.dx; this.y += this.dy; this.angle += this.va;
+                if (this.type === 'fire') { this.dy -= 0.15; this.dx += Math.sin(this.y / 15) * 0.2; }
+                else if (this.type === 'snow') { this.dy += 0.06; }
+                this.life--;
+            }
+            draw() {
+                ctx.save();
+                ctx.globalAlpha = this.life / this.maxLife;
+                ctx.fillStyle = this.color;
+                if (this.type === 'lightning') {
+                    ctx.shadowColor = '#06b6d4'; ctx.shadowBlur = 10; ctx.lineWidth = 2; ctx.strokeStyle = this.color;
+                    ctx.beginPath(); ctx.moveTo(this.x, this.y);
+                    ctx.lineTo(this.x + (Math.random() - 0.5) * 20, this.y + (Math.random() - 0.5) * 20); ctx.stroke();
+                } else if (this.type === 'snow') {
+                    ctx.translate(this.x, this.y); ctx.rotate(this.angle); ctx.strokeStyle = this.color; ctx.lineWidth = 1;
+                    for (let i = 0; i < 3; i++) { ctx.rotate(Math.PI / 3); ctx.beginPath(); ctx.moveTo(-this.size, 0); ctx.lineTo(this.size, 0); ctx.stroke(); }
+                } else {
+                    ctx.shadowColor = this.color; ctx.shadowBlur = 8;
+                    ctx.beginPath(); ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2); ctx.fill();
+                }
+                ctx.restore();
+            }
+        }
+
+        function spawnBloodExplosion(x, y, multiplier = 1, isFire = false) {
+            const count = Math.floor(25 * multiplier);
+            for (let i = 0; i < count; i++) {
+                const angle = Math.random() * Math.PI * 2;
+                const speed = Math.random() * 5 + 1.5;
+                const dx = Math.cos(angle) * speed;
+                const dy = Math.sin(angle) * speed;
+                
+                let colorString = 'rgba(239, 68, 68, '; 
+                if (isFire) {
+                    const r = Math.random();
+                    if (r < 0.4) colorString = 'rgba(249, 115, 22, ';  
+                    else if (r < 0.8) colorString = 'rgba(234, 179, 8, '; 
+                    else colorString = 'rgba(71, 85, 105, ';           
+                }
+                particles.push(new GameParticle(x, y, dx, dy, Math.random() * 4 + 2, colorString + '0.8)', 25));
+            }
+        }
+
+        class Enemy {
+            constructor(x, y, type) {
+                this.x = x; this.y = y; this.type = type; 
+                
+                if (type === 'boss') {
+                    this.hp = 3500; 
+                    this.maxHp = 3500;
+                    this.size = 65;
+                    this.speed = 0.55;
+                    this.color = '#fbbf24'; 
+                } else {
+                    this.hp = 60 + wave * 30; 
+                    this.maxHp = this.hp;
+                    this.size = 20 + Math.random() * 8;
+                    this.speed = 1.25 + Math.random() * 0.55; 
+                    
+                    if (type === 'demon') {
+                        this.size += 8; this.hp *= 2.2; this.maxHp = this.hp; this.speed *= 0.65; this.color = '#ef4444';
+                    } else if (type === 'spectre') {
+                        this.speed *= 1.35; this.color = '#c084fc';
+                    } else {
+                        this.color = '#475569';
+                    }
+                }
+                this.slowTimer = 0;
+            }
+            update() {
+                if (this.slowTimer > 0) this.slowTimer--;
+                
+                const dx = altar.x - this.x;
+                const dy = altar.y - this.y;
+                const dist = Math.hypot(dx, dy);
+                
+                if (dist > altar.r - 5) {
+                    const currentSpeed = this.slowTimer > 0 ? this.speed * 0.3 : this.speed;
+                    this.x += (dx / dist) * currentSpeed;
+                    this.y += (dy / dist) * currentSpeed;
+                } else {
+                    if (this.type === 'boss') {
+                        altar.hp -= 50;
+                    } else {
+                        altar.hp -= 12;
+                    }
+                    
+                    playHitSound();
+                    triggerScreenShake(12, 16);
+                    updateHPBar();
+                    
+                    for (let i = 0; i < 20; i++) {
+                        particles.push(new GameParticle(this.x, this.y, (Math.random() - 0.5) * 8, (Math.random() - 0.5) * 8, Math.random() * 4 + 2, '#7f1d1d', 20));
+                    }
+                    this.hp = 0; 
+                }
+            }
+            draw() {
+                ctx.save();
+                ctx.shadowColor = this.color;
+                ctx.shadowBlur = this.type === 'boss' ? 30 : 12;
+                ctx.fillStyle = this.color;
+                
+                ctx.beginPath();
+                const sides = this.type === 'boss' ? 8 : (this.type === 'demon' ? 6 : (this.type === 'spectre' ? 4 : 5));
+                const pulse = 1 + Math.sin(Date.now() * (this.type === 'boss' ? 0.015 : 0.008)) * 0.08;
+                for (let i = 0; i < sides; i++) {
+                    const angle = (i * Math.PI * 2) / sides + Date.now() * (this.type === 'boss' ? 0.001 : 0.003);
+                    const rx = this.x + Math.cos(angle) * this.size * pulse;
+                    const ry = this.y + Math.sin(angle) * this.size * pulse;
+                    if (i === 0) ctx.moveTo(rx, ry); else ctx.lineTo(rx, ry);
+                }
+                ctx.closePath();
+                ctx.fill();
+
+                ctx.fillStyle = this.type === 'boss' ? '#a855f7' : '#ff0000';
+                ctx.shadowColor = ctx.fillStyle;
+                ctx.shadowBlur = 10;
+                ctx.beginPath();
+                if (this.type === 'boss') {
+                    ctx.arc(this.x - 15, this.y - 5, 6, 0, Math.PI * 2);
+                    ctx.arc(this.x + 15, this.y - 5, 6, 0, Math.PI * 2);
+                    ctx.arc(this.x, this.y - 18, 5, 0, Math.PI * 2); 
+                } else {
+                    ctx.arc(this.x - 6, this.y - 2, 3.5, 0, Math.PI * 2);
+                    ctx.arc(this.x + 6, this.y - 2, 3.5, 0, Math.PI * 2);
+                }
+                ctx.fill();
+
+                if (this.hp < this.maxHp) {
+                    const barW = this.size * (this.type === 'boss' ? 2.2 : 1.6);
+                    const barH = this.type === 'boss' ? 7 : 4.5;
+                    ctx.fillStyle = 'rgba(15, 23, 42, 0.8)';
+                    ctx.beginPath(); ctx.rect(this.x - barW/2, this.y - this.size - 15, barW, barH); ctx.fill();
+                    ctx.fillStyle = this.type === 'boss' ? '#eab308' : '#ef4444';
+                    ctx.beginPath(); ctx.rect(this.x - barW/2, this.y - this.size - 15, barW * (this.hp / this.maxHp), barH); ctx.fill();
+                }
+                ctx.restore();
+            }
+        }
+
+        class Projectile {
+            constructor(x, y, angle) {
+                this.x = x; this.y = y; this.speed = 13;
+                this.dx = Math.cos(angle) * this.speed; this.dy = Math.sin(angle) * this.speed;
+                this.size = 6; this.history = [];
+            }
+            update() {
+                this.history.push({ x: this.x, y: this.y });
+                if (this.history.length > 5) this.history.shift();
+                this.x += this.dx; this.y += this.dy;
+            }
+            draw() {
+                ctx.save();
+                ctx.globalAlpha = 0.3;
+                this.history.forEach((h, idx) => {
+                    ctx.fillStyle = '#67e8f9'; ctx.beginPath(); ctx.arc(h.x, h.y, this.size * (idx / this.history.length), 0, Math.PI * 2); ctx.fill();
+                });
+                ctx.globalAlpha = 1; ctx.shadowColor = '#38bdf8'; ctx.shadowBlur = 15; ctx.fillStyle = '#ffffff';
+                ctx.beginPath(); ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2); ctx.fill();
+                ctx.restore();
+            }
+        }
+
+        function resize() {
+            width = canvas.width = window.innerWidth;
+            height = canvas.height = window.innerHeight;
+            altar.x = width / 2; altar.y = height + 10;
+        }
+
+        function startGame() {
+            initAudio();
+            gameActive = true;
+            startScreen.classList.add('opacity-0');
+            setTimeout(() => { startScreen.classList.add('hidden'); }, 300);
+            resetGame();
+        }
+
+        function resetGame() {
+            score = 0; wave = 1; altar.hp = 100; altar.maxHp = 100;
+            enemies = []; projectiles = []; particles = []; activeSpells = [];
+            spellGauges = [100, 100, 100, 100]; bossSpawned = false;
+            updateHPBar();
+            
+            gameOverScreen.classList.add('hidden');
+            victoryScreen.classList.add('hidden');
+            
+            stats.damage = 25;
+            stats.dmgLevel = 1;   
+            stats.speedLevel = 1; 
+            stats.costDmg = 15;
+            stats.costSpd = 20;
+            stats.costHeal = 10;
+            
+            updateUpgradeTexts();
+        }
+
+        function updateHPBar() {
+            const hpPercent = Math.max(0, (altar.hp / altar.maxHp) * 100);
+            hpBar.style.width = hpPercent + '%';
+            hpText.innerText = `${Math.max(0, Math.floor(altar.hp))}/${altar.maxHp}`;
+            
+            if (altar.hp <= 0 && gameActive) {
+                gameActive = false;
+                finalWave.innerText = `Ván ${wave}`;
+                triggerScreenShake(20, 25);
+                gameOverScreen.classList.remove('hidden');
+            }
+        }
+
+        function updateUpgradeTexts() {
+            const btnDmg = document.getElementById('btn-up-dmg');
+            const btnSpd = document.getElementById('btn-up-spd');
+
+            if (stats.dmgLevel >= 5) {
+                document.getElementById('cost-dmg').innerText = `Đạt Cực Hạn (MAX)`;
+                btnDmg.className = "flex flex-col items-center justify-center px-3.5 py-1.5 rounded-xl border border-slate-700 bg-slate-900 text-slate-500 text-xs font-bold cursor-not-allowed";
+            } else {
+                document.getElementById('cost-dmg').innerText = `Giá: ${stats.costDmg} Hồn`;
+                btnDmg.className = "flex flex-col items-center justify-center px-3.5 py-1.5 rounded-xl border border-amber-500/30 bg-amber-950/20 text-amber-400 text-xs font-bold hover:bg-amber-900/30 transition-all active:scale-95";
+            }
+
+            if (stats.speedLevel >= 5) {
+                document.getElementById('cost-spd').innerText = `Đạt Cực Hạn (MAX)`;
+                btnSpd.className = "flex flex-col items-center justify-center px-3.5 py-1.5 rounded-xl border border-slate-700 bg-slate-900 text-slate-500 text-xs font-bold cursor-not-allowed";
+            } else {
+                document.getElementById('cost-spd').innerText = `Giá: ${stats.costSpd} Hồn`;
+                btnSpd.className = "flex flex-col items-center justify-center px-3.5 py-1.5 rounded-xl border border-cyan-500/30 bg-cyan-950/20 text-cyan-400 text-xs font-bold hover:bg-cyan-900/30 transition-all active:scale-95";
+            }
+
+            document.getElementById('cost-heal').innerText = `Giá: ${stats.costHeal} Hồn`;
+            
+            let dmgStars = ''; for(let i=0; i<stats.dmgLevel; i++) dmgStars += '★';
+            document.getElementById('star-dmg').innerText = dmgStars;
+
+            let spdStars = ''; for(let i=0; i<stats.speedLevel; i++) spdStars += '★';
+            document.getElementById('star-spd').innerText = spdStars;
+
+            scoreDisplay.innerText = `Linh Hồn: ${score}`;
+            waveDisplay.innerText = `Đợt tấn công: ${wave}/5`;
+        }
+
+        function buyUpgrade(type) {
+            if (!gameActive) return;
+            
+            if (type === 'dmg') {
+                if (stats.dmgLevel < 5 && score >= stats.costDmg) { 
+                    score -= stats.costDmg;
+                    stats.dmgLevel += 1;
+                    stats.damage += 15;
+                    stats.costDmg = Math.floor(stats.costDmg * 1.6);
+                    spawnUpgradeEffect('#f59e0b');
+                }
+            } else if (type === 'spd') {
+                if (stats.speedLevel < 5 && score >= stats.costSpd) { 
+                    score -= stats.costSpd;
+                    stats.speedLevel += 1;
+                    stats.costSpd = Math.floor(stats.costSpd * 1.7);
+                    spawnUpgradeEffect('#06b6d4');
+                }
+            } else if (type === 'heal') {
+                if (score >= stats.costHeal && altar.hp < altar.maxHp) {
+                    score -= stats.costHeal;
+                    altar.hp = Math.min(altar.maxHp, altar.hp + 25);
+                    stats.costHeal = Math.floor(stats.costHeal * 1.4);
+                    updateHPBar();
+                    spawnUpgradeEffect('#10b981');
+                }
+            }
+            updateUpgradeTexts();
+        }
+
+        function spawnUpgradeEffect(color = '#fbbf24') {
+            for (let i = 0; i < 20; i++) {
+                particles.push(new GameParticle(altar.x + (Math.random() - 0.5) * 80, altar.y - 30, (Math.random() - 0.5) * 6, -Math.random() * 6 - 2, Math.random() * 4 + 2, color, 30));
+            }
+            triggerScreenShake(3, 4);
+        }
+
+        function triggerSpell(type) {
+            if (!gameActive || spellGauges[type] < 100) return;
+            
+            playSpellSound(type); spellGauges[type] = 0; 
+            
+            if (type === 0) { 
+                activeSpells.push({ type: 'lightning', life: 35 }); triggerScreenShake(10, 12);
+                enemies.forEach(e => { if (e.y > height * 0.15) { e.hp -= 250; for (let k = 0; k < 15; k++) particles.push(new GameParticle(e.x, e.y, 0, 0, 0, '#22d3ee', 20, 'lightning')); } });
+            } else if (type === 1) { 
+                activeSpells.push({ type: 'blizzard', life: 140 }); triggerScreenShake(8, 6);
+                enemies.forEach(e => { e.slowTimer = 220; e.hp -= 150; for (let k = 0; k < 10; k++) particles.push(new GameParticle(e.x, e.y, (Math.random() - 0.5) * 5, (Math.random() - 0.5) * 5, Math.random() * 5 + 2, '#e2e8f0', 25, 'snow')); });
+            } else if (type === 2) { 
+                activeSpells.push({ type: 'shield', life: 200 }); triggerScreenShake(6, 5);
+                altar.hp = Math.min(altar.maxHp, altar.hp + 15); updateHPBar();
+            } else { 
+                activeSpells.push({ type: 'phoenix', life: 110 }); triggerScreenShake(18, 15);
+            }
+        }
+
+        function spawnEnemyWave() {
+            if (wave === 5) {
+                bossSpawned = true;
+                
+                const guardCount = 12;
+                for (let i = 0; i < guardCount; i++) {
+                    setTimeout(() => {
+                        if (!gameActive) return;
+                        enemies.push(new Enemy(Math.random() * width, -30, 'spectre'));
+                    }, i * 350);
+                }
+                
+                setTimeout(() => {
+                    if (!gameActive) return;
+                    triggerScreenShake(30, 20); 
+                    enemies.push(new Enemy(width / 2, -100, 'boss'));
+                }, 2500);
+
+            } else {
+                const count = 7 + wave * 5; 
+                for (let i = 0; i < count; i++) {
+                    setTimeout(() => {
+                        if (!gameActive || wave === 5) return;
+                        const type = Math.random() < 0.25 ? 'demon' : (Math.random() < 0.35 ? 'spectre' : 'shadow');
+                        enemies.push(new Enemy(Math.random() * width, -30, type));
+                    }, i * 380); 
+                }
+            }
+        }
+
+        function drawLightningBranch(x1, y1, x2, y2, displace) {
+            if (displace < 2) {
+                ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke();
+            } else {
+                const midX = (x1 + x2) / 2, midY = (y1 + y2) / 2;
+                const nx = midX + (Math.random() - 0.5) * displace, ny = midY + (Math.random() - 0.5) * displace;
+                drawLightningBranch(x1, y1, nx, ny, displace / 2); drawLightningBranch(nx, ny, x2, y2, displace / 2);
+            }
+        }
+
+        function drawAltar() {
+            ctx.save();
+            const glowGrad = ctx.createRadialGradient(altar.x, altar.y, altar.r * 0.5, altar.x, altar.y, altar.r * 2);
+            glowGrad.addColorStop(0, 'rgba(234, 179, 8, 0.15)'); glowGrad.addColorStop(1, 'rgba(2, 6, 23, 0)');
+            ctx.fillStyle = glowGrad; ctx.beginPath(); ctx.arc(altar.x, altar.y, altar.r * 2, 0, Math.PI * 2); ctx.fill();
+
+            ctx.shadowColor = '#eab308'; ctx.shadowBlur = 25;
+            const altarGrad = ctx.createRadialGradient(altar.x, altar.y, 10, altar.x, altar.y, altar.r);
+            altarGrad.addColorStop(0, '#111827'); altarGrad.addColorStop(0.65, '#1e293b'); altarGrad.addColorStop(1, '#854d0e');
+            ctx.fillStyle = altarGrad; ctx.beginPath(); ctx.arc(altar.x, altar.y, altar.r, 0, Math.PI * 2); ctx.fill();
+            ctx.restore();
+
+            ctx.save();
+            ctx.translate(altar.x, altar.y); ctx.rotate(-Date.now() * 0.0007);
+            ctx.strokeStyle = 'rgba(234, 179, 8, 0.75)'; ctx.shadowColor = '#eab308'; ctx.shadowBlur = 10; ctx.lineWidth = 2.5;
+            ctx.beginPath(); ctx.arc(0, 0, altar.r * 0.8, 0, Math.PI * 2); ctx.stroke();
+            ctx.fillStyle = '#fbbf24';
+            for (let i = 0; i < 8; i++) {
+                const angle = (i * Math.PI) / 4; ctx.save(); ctx.translate(Math.cos(angle) * (altar.r * 0.8), Math.sin(angle) * (altar.r * 0.8));
+                ctx.rotate(angle + Math.PI/2); ctx.font = 'bold 11px sans-serif'; ctx.textAlign = 'center'; ctx.fillText("𐎎𐏁", 0, 4); ctx.restore();
+            }
+            ctx.restore();
+
+            ctx.save();
+            const crystalSize = 25 + Math.sin(Date.now() * 0.008) * 4;
+            const crystalGrad = ctx.createRadialGradient(altar.x, altar.y - 12, 1, altar.x, altar.y - 12, crystalSize);
+            crystalGrad.addColorStop(0, '#ffffff'); crystalGrad.addColorStop(0.35, '#38bdf8'); crystalGrad.addColorStop(1, '#0369a1');
+            ctx.shadowColor = '#06b6d4'; ctx.shadowBlur = 20; ctx.fillStyle = crystalGrad;
+            ctx.beginPath();
+            for (let i = 0; i < 6; i++) {
+                const angle = (i * Math.PI) / 3;
+                const rx = altar.x + Math.cos(angle) * crystalSize * 0.65, ry = altar.y - 12 + Math.sin(angle) * crystalSize;
+                if (i === 0) ctx.moveTo(rx, ry); else ctx.lineTo(rx, ry);
+            }
+            ctx.closePath(); ctx.fill(); ctx.restore();
+
+            ctx.save();
+            ctx.translate(altar.x, altar.y + (-12 + Math.sin(Date.now() * 0.004) * 6));
+            ctx.fillStyle = '#10b981'; ctx.shadowColor = '#34d399'; ctx.shadowBlur = 15;
+            ctx.beginPath(); ctx.arc(0, -18, 12, 0, Math.PI * 2); ctx.fill();
+            ctx.beginPath(); ctx.moveTo(-10, -12); ctx.quadraticCurveTo(-14, 15, -6, 25); ctx.quadraticCurveTo(0, 15, 6, 25); ctx.quadraticCurveTo(14, 15, 10, -12); ctx.closePath(); ctx.fill();
+            ctx.restore();
+
+            ctx.save();
+            ctx.translate(altar.x, altar.y - 10); ctx.rotate(Date.now() * 0.004);
+            ctx.fillStyle = '#a855f7'; ctx.shadowColor = '#c084fc'; ctx.shadowBlur = 8;
+            for(let i=0; i<3; i++) {
+                const angle = (i * Math.PI * 2) / 3; ctx.beginPath(); ctx.arc(Math.cos(angle)*35, Math.sin(angle)*15, 4.5, 0, Math.PI*2); ctx.fill();
+            }
+            ctx.restore();
+
+            ctx.save();
+            const sx = altar.x + Math.cos(player.angle) * 50, sy = altar.y - 10 + Math.sin(player.angle) * 50;
+            ctx.strokeStyle = '#eab308'; ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(altar.x, altar.y - 10); ctx.lineTo(sx, sy); ctx.stroke();
+            ctx.fillStyle = '#67e8f9'; ctx.shadowColor = '#22d3ee'; ctx.shadowBlur = 20; ctx.beginPath(); ctx.arc(sx, sy, 8, 0, Math.PI * 2); ctx.fill();
+            ctx.restore();
+        }
+
+        function processActiveSpells() {
+            activeSpells.forEach((sp, idx) => {
+                sp.life--;
+                if (sp.type === 'blizzard') {
+                    ctx.save();
+                    const frostGrad = ctx.createRadialGradient(width/2, height/2, width/4, width/2, height/2, width*0.8);
+                    frostGrad.addColorStop(0, 'rgba(186, 230, 253, 0.08)'); frostGrad.addColorStop(0.85, 'rgba(186, 230, 253, 0.18)'); frostGrad.addColorStop(1, 'rgba(255, 255, 255, 0.35)');
+                    ctx.fillStyle = frostGrad; ctx.fillRect(0, 0, width, height);
+                    if (Math.random() < 0.35) particles.push(new GameParticle(Math.random() * width, -10, (Math.random() - 0.5) * 4, Math.random() * 4 + 2, Math.random() * 8 + 3, '#bae6fd', 60, 'snow'));
+                    ctx.restore();
+                } else if (sp.type === 'shield') {
+                    ctx.save(); ctx.shadowColor = '#10b981'; ctx.shadowBlur = 30; ctx.strokeStyle = 'rgba(16, 185, 129, 0.75)'; ctx.lineWidth = 6;
+                    const shieldR = altar.r * 1.6; ctx.beginPath(); ctx.arc(altar.x, altar.y, shieldR, Math.PI, Math.PI * 2); ctx.stroke();
+                    ctx.restore();
+                    enemies.forEach(e => {
+                        const dist = Math.hypot(e.x - altar.x, e.y - altar.y);
+                        if (dist < shieldR + 25) {
+                            e.hp -= 3.5; const dx = e.x - altar.x, dy = e.y - altar.y;
+                            e.x += (dx / dist) * 4.5; e.y += (dy / dist) * 4.5;
+                        }
+                    });
+                } else if (sp.type === 'phoenix') {
+                    ctx.save(); ctx.fillStyle = 'rgba(251, 146, 60, 0.08)'; ctx.fillRect(0, 0, width, height);
+                    if (Math.random() < 0.35) {
+                        const startX = Math.random() * width, targetX = startX + (Math.random() - 0.5) * 200, targetY = height - Math.random() * 300;
+                        triggerScreenShake(6, 10);
+                        for (let k = 0; k < 15; k++) particles.push(new GameParticle(startX, -30 + Math.random() * 200, (targetX - startX) / 45 + (Math.random() - 0.5) * 4, 6 + Math.random() * 4, Math.random() * 9 + 4, '#f97316', 40, 'fire'));
+                        enemies.forEach(e => { if (Math.hypot(e.x - targetX, e.y - targetY) < 160) { e.hp -= 50; spawnBloodExplosion(e.x, e.y, 0.4, true); } });
+                    }
+                    ctx.restore();
+                } else if (sp.type === 'lightning') {
+                    ctx.save(); ctx.strokeStyle = '#e0f2fe'; ctx.shadowColor = '#06b6d4'; ctx.shadowBlur = 25; ctx.lineWidth = 3.5;
+                    enemies.forEach(e => { if (e.y > height * 0.15 && Math.random() < 0.15) drawLightningBranch(altar.x, altar.y - 100, e.x, e.y, 45); });
+                    ctx.restore();
+                }
+                if (sp.life <= 0) activeSpells.splice(idx, 1);
+            });
+        }
+
+        function animate() {
+            ctx.save();
+            if (shakeTime > 0) { ctx.translate((Math.random() - 0.5) * shakeIntensity, (Math.random() - 0.5) * shakeIntensity); shakeTime--; }
+            ctx.clearRect(0, 0, width, height);
+
+            processActiveSpells();
+            drawAltar();
+
+            if (gameActive) {
+                if (isShooting) {
+                    player.currentCooldown++;
+                    const interval = Math.max(4, player.fireRate - stats.speedLevel * 2.5); 
+                    if (player.currentCooldown >= interval) {
+                        playShootSound();
+                        projectiles.push(new Projectile(altar.x, altar.y - 10, player.angle));
+                        player.currentCooldown = 0;
+                    }
+                }
+
+                projectiles.forEach((b, bi) => {
+                    b.update(); b.draw();
+                    if (b.x < 0 || b.x > width || b.y < 0) projectiles.splice(bi, 1);
+                });
+
+                if (enemies.length === 0 && !waveActive) {
+                    if (wave === 5 && bossSpawned) {
+                        gameActive = false;
+                        isShooting = false;
+                        victoryScore.innerText = score;
+                        victoryScreen.classList.remove('hidden');
+                    } else {
+                        waveActive = true;
+                        setTimeout(() => {
+                            if (!gameActive) return;
+                            spawnEnemyWave();
+                            waveActive = false;
+                            updateUpgradeTexts();
+                        }, 2000);
+                    }
+                }
+
+                for (let i = enemies.length - 1; i >= 0; i--) {
+                    const e = enemies[i];
+                    e.update();
+                    e.draw();
+
+                    projectiles.forEach((b, bi) => {
+                        if (Math.hypot(e.x - b.x, e.y - b.y) < e.size + b.size) {
+                            e.hp -= stats.damage;
+                            projectiles.splice(bi, 1);
+                            for (let k = 0; k < 6; k++) particles.push(new GameParticle(e.x, e.y, (Math.random() - 0.5) * 5, (Math.random() - 0.5) * 5, Math.random() * 3 + 1, e.color, 15));
+                        }
+                    });
+
+                    if (e.hp <= 0) {
+                        score += e.type === 'boss' ? 500 : 10;
+                        
+                        const isHardMob = e.type === 'demon' || e.type === 'boss';
+                        spawnBloodExplosion(e.x, e.y, e.type === 'boss' ? 3.0 : 1.0, isHardMob);
+                        
+                        enemies.splice(i, 1);
+                        
+                        if (enemies.length === 0 && !waveActive && wave < 5) {
+                            wave++;
+                        }
+                    }
+                }
+            }
+
+            for (let i = 0; i < 4; i++) {
+                if (spellGauges[i] < 100) spellGauges[i] = Math.min(100, spellGauges[i] + spellChargeRates[i]);
+                document.getElementById(`cooldown-${i}`).innerText = spellGauges[i] >= 100 ? 'SẴN SÀNG' : `${Math.floor(spellGauges[i])}%`;
+                document.getElementById(`cooldown-${i}`).style.height = spellGauges[i] >= 100 ? '0%' : '100%';
+            }
+
+            for (let i = particles.length - 1; i >= 0; i--) {
+                const p = particles[i]; p.update(); p.draw();
+                if (p.life <= 0) particles.splice(i, 1);
+            }
+
+            ctx.restore();
+            requestAnimationFrame(animate);
+        }
+
+        function updateAngle(clientX, clientY) {
+            player.angle = Math.atan2(clientY - (altar.y - 10), clientX - altar.x);
+        }
+
+        window.addEventListener('mousemove', (e) => { updateAngle(e.clientX, e.clientY); });
+        window.addEventListener('mousedown', () => { isShooting = true; });
+        window.addEventListener('mouseup', () => { isShooting = false; });
+
+        window.addEventListener('keydown', (e) => {
+            if (e.key === '1') triggerSpell(0);
+            if (e.key === '2') triggerSpell(1);
+            if (e.key === '3') triggerSpell(2);
+            if (e.key === '4') triggerSpell(3);
+        });
+
+        window.addEventListener('touchmove', (e) => { if (e.touches.length > 0) updateAngle(e.touches[0].clientX, e.touches[0].clientY); }, { passive: true });
+        window.addEventListener('touchstart', (e) => { isShooting = true; if (e.touches.length > 0) updateAngle(e.touches[0].clientX, e.touches[0].clientY); }, { passive: true });
+        window.addEventListener('touchend', () => { isShooting = false; });
+
+        window.addEventListener('resize', resize);
+        resize();
+        animate();
+    </script>
+</body>
+</html>
